@@ -1,0 +1,58 @@
+
+### Test placing a call
+
+POST http://localhost:4173/api/place-call
+Content-Type: application/json
+
+{
+  "name": "manager"
+}
+
+
+### Test switching interpreter to available
+
+POST http://localhost:4173/api/mode-available
+Content-Type: application/json
+
+{
+  "interpreterId": "671838d98bef33d25e90dd9e"
+}
+
+
+
+### Test switching interpreter to available
+
+GET http://localhost:4173/api/test-room-creation
+Content-Type: application/json
+
+
+
+### Test switching interpreter to available
+
+GET https://api.videosdk.live/v2/rooms/
+Content-Type: application/json
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcGlrZXkiOiJiZDdlZThiYy05NmFmLTRkNWQtOWZiMS01OGU5MmQyODM1ZDkiLCJwZXJtaXNzaW9ucyI6WyJhbGxvd19qb2luIl0sInZlcnNpb24iOjIsInJvb21JZCI6IiIsInBhcnRpY2lwYW50SWQiOiIiLCJyb2xlcyI6W10sImlhdCI6MTcyOTk1NTg2NywiZXhwIjoxNzI5OTYzMDY3fQ.w10dI2m0iSSo-vdW5LiBSVWkHbBWRW3LbArvTfG0-cA
+
+
+### Test switching interpreter to available
+
+
+
+GET https://api.videosdk.live/v2/sessions/
+Content-Type: application/json
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcGlrZXkiOiJiZDdlZThiYy05NmFmLTRkNWQtOWZiMS01OGU5MmQyODM1ZDkiLCJwZXJtaXNzaW9ucyI6WyJhbGxvd19qb2luIl0sInZlcnNpb24iOjIsInJvb21JZCI6IiIsInBhcnRpY2lwYW50SWQiOiIiLCJyb2xlcyI6W10sImlhdCI6MTcyOTk1NTg2NywiZXhwIjoxNzI5OTYzMDY3fQ.w10dI2m0iSSo-vdW5LiBSVWkHbBWRW3LbArvTfG0-cA
+
+
+
+
+
+### Close VideoSDK Room
+
+POST https://api.videosdk.live/v2/rooms/deactivate
+Content-Type: application/json
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcGlrZXkiOiJiZDdlZThiYy05NmFmLTRkNWQtOWZiMS01OGU5MmQyODM1ZDkiLCJwZXJtaXNzaW9ucyI6WyJhbGxvd19qb2luIl0sInZlcnNpb24iOjIsInJvb21JZCI6IiIsInBhcnRpY2lwYW50SWQiOiIiLCJyb2xlcyI6W10sImlhdCI6MTcyOTk1NTg2NywiZXhwIjoxNzI5OTYzMDY3fQ.w10dI2m0iSSo-vdW5LiBSVWkHbBWRW3LbArvTfG0-cA  
+
+{
+  "roomId": "b60f-2hes-gzps"
+}
+
