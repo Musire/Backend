@@ -1,58 +1,52 @@
 
-### Test placing a call
+### test registering agent
 
-POST http://localhost:4173/api/place-call
+POST http://localhost:4173/api/register
 Content-Type: application/json
 
 {
-  "name": "manager"
+  "email": "auto@testing.com",
+  "password": "password",
+  "name": "first",
+  "surname": "test",
+  "role": "agent"
 }
 
 
-### Test switching interpreter to available
+### Test login
 
-POST http://localhost:4173/api/mode-available
+POST http://localhost:4173/api/login
 Content-Type: application/json
 
 {
-  "interpreterId": "671838d98bef33d25e90dd9e"
+  "email": "auto@testing.com",
+  "password": "password"
 }
 
 
+### Test login
 
-### Test switching interpreter to available
-
-GET http://localhost:4173/api/test-room-creation
+GET http://localhost:4173/api/dashboard
 Content-Type: application/json
+Authorization: bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3MzZkY2ViMjZkZGQxZjg5YTM4MDI5MyIsImVtYWlsIjoiYXV0b0B0ZXN0aW5nLmNvbSIsInJvbGUiOiJhZ2VudCIsImlhdCI6MTczMTY0ODk3MCwiZXhwIjoxNzMxNjUyNTcwfQ.ssBypDY9YWFNMKbjT3kQ5XAGPbEXl2D-1kqqTv7xwD0
 
 
+### Test profile
 
-### Test switching interpreter to available
-
-GET https://api.videosdk.live/v2/rooms/
+GET http://localhost:4173/api/profile
 Content-Type: application/json
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcGlrZXkiOiJiZDdlZThiYy05NmFmLTRkNWQtOWZiMS01OGU5MmQyODM1ZDkiLCJwZXJtaXNzaW9ucyI6WyJhbGxvd19qb2luIl0sInZlcnNpb24iOjIsInJvb21JZCI6IiIsInBhcnRpY2lwYW50SWQiOiIiLCJyb2xlcyI6W10sImlhdCI6MTcyOTk1NTg2NywiZXhwIjoxNzI5OTYzMDY3fQ.w10dI2m0iSSo-vdW5LiBSVWkHbBWRW3LbArvTfG0-cA
-
-
-### Test switching interpreter to available
+Authorization: bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3MzZkY2ViMjZkZGQxZjg5YTM4MDI5MyIsImVtYWlsIjoiYXV0b0B0ZXN0aW5nLmNvbSIsInJvbGUiOiJhZ2VudCIsImlhdCI6MTczMTY0ODk3MCwiZXhwIjoxNzMxNjUyNTcwfQ.ssBypDY9YWFNMKbjT3kQ5XAGPbEXl2D-1kqqTv7xwD0
 
 
 
-GET https://api.videosdk.live/v2/sessions/
+### Test profile
+
+POST  http://localhost:4173/api/change-password
 Content-Type: application/json
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcGlrZXkiOiJiZDdlZThiYy05NmFmLTRkNWQtOWZiMS01OGU5MmQyODM1ZDkiLCJwZXJtaXNzaW9ucyI6WyJhbGxvd19qb2luIl0sInZlcnNpb24iOjIsInJvb21JZCI6IiIsInBhcnRpY2lwYW50SWQiOiIiLCJyb2xlcyI6W10sImlhdCI6MTcyOTk1NTg2NywiZXhwIjoxNzI5OTYzMDY3fQ.w10dI2m0iSSo-vdW5LiBSVWkHbBWRW3LbArvTfG0-cA
-
-
-
-
-
-### Close VideoSDK Room
-
-POST https://api.videosdk.live/v2/rooms/deactivate
-Content-Type: application/json
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcGlrZXkiOiJiZDdlZThiYy05NmFmLTRkNWQtOWZiMS01OGU5MmQyODM1ZDkiLCJwZXJtaXNzaW9ucyI6WyJhbGxvd19qb2luIl0sInZlcnNpb24iOjIsInJvb21JZCI6IiIsInBhcnRpY2lwYW50SWQiOiIiLCJyb2xlcyI6W10sImlhdCI6MTcyOTk1NTg2NywiZXhwIjoxNzI5OTYzMDY3fQ.w10dI2m0iSSo-vdW5LiBSVWkHbBWRW3LbArvTfG0-cA  
+Authorization: bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3MzZkY2ViMjZkZGQxZjg5YTM4MDI5MyIsImVtYWlsIjoiYXV0b0B0ZXN0aW5nLmNvbSIsInJvbGUiOiJhZ2VudCIsImlhdCI6MTczMTY0ODk3MCwiZXhwIjoxNzMxNjUyNTcwfQ.ssBypDY9YWFNMKbjT3kQ5XAGPbEXl2D-1kqqTv7xwD0
 
 {
-  "roomId": "b60f-2hes-gzps"
+  "currentPassword": "password2",
+  "newPassword": "pokemon"
 }
 

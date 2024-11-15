@@ -6,7 +6,7 @@ const cors = require('cors')
 const express = require('express')
 const socketIo = require('socket.io');
 const mongoose = require('mongoose')
-const { router, setIoInstance } = require('./routes/api')
+const { router } = require('./routes/api')
 const { setupSocket } = require('./sockets/socketHandler')
 
 // instantiate express server as app
@@ -44,7 +44,7 @@ mongoose.connect(db)
 
 
 app.use(express.json());
-setIoInstance(io); // Set the io instance for the routes
+// setIoInstance(io); // Set the io instance for the routes
 app.use('/api', router);
 
 
