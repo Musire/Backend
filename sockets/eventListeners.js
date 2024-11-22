@@ -1,4 +1,4 @@
-const Interpreter = require('../models/Interpreter'); // Import Interpreter model
+const Agent = require('../models/Agent'); // Import Interpreter model
 const Caller = require("../models/Caller")
 const CallSession = require("../models/CallSession")
 const availableInterpreters = require('../queues/AvailableInterpreters')
@@ -26,10 +26,10 @@ module.exports.registerCallerListener = (socket) => {
 module.exports.registerInterpreterListener = (socket) => {
     try {
         socket.on('register-interpreter', async ({ interpreterId }) => {
-            const interpreter = await Interpreter.findById(interpreterId);
-            if (interpreter) {
-                interpreter.socketId = socket.id; // Update socket ID for the interpreter
-                await interpreter.save();
+            const agent = await Agent.findById(interpreterId);
+            if (agent) {
+                agent.socketId = socket.id; // Update socket ID for the interpreter
+                await agent.save();
                 
                 // Add interpreter to the queue of available interpreters
                 availableInterpreters.addInterpreterId(interpreterId);
@@ -55,14 +55,14 @@ module.exports.placeCallListener = (socket, io) => {
       
             console.log('queue produced id: ', interpreterId)
       
-            const interpreter = await Interpreter.findById(interpreterId)
+            const agent = await Agent.findById(interpreterId)
       
-            if (interpreter) {
+            if (agent) {
               // Emit 'ringing' to the interpreter's socket
-              io.to(interpreter.socketId).emit('incoming-call', {callerId, callPlacedAt});
+              io.to(agent.socketId).emit('incoming-call', {callerId, callPlacedAt});
       
               // Notify the caller that the interpreter is being called
-              console.log('call status sent to caller: ringing', interpreter.socketId)
+              console.log('call status sent to caller: ringing', agent.socketId)
               io.to(socket.id).emit('call-status', { status: 'Ringing' });
             } else {
               // No interpreters available, notify the caller
@@ -81,9 +81,9 @@ module.exports.callAcceptedListener = (socket, io) => {
     try {
         socket.on('call-accepted', async ({ callerId, interpreterId, callPlacedAt }) => {
             const caller = await Caller.findById(callerId);
-            const interpreter = await Interpreter.findById(interpreterId);
+            const agent = await Agent.findById(interpreterId);
     
-            if (!caller || !interpreter) return;
+            if (!caller || !agent) return;
 
             const callAcceptedAt = Date.now()
 
@@ -103,10 +103,10 @@ module.exports.callAcceptedListener = (socket, io) => {
             await callSession.save();
     
             const callerToken = generateAuthToken('caller', roomId, caller._id);
-            const interpreterToken = generateAuthToken('interpreter', roomId, interpreter._id);
+            const interpreterToken = generateAuthToken('interpreter', roomId, agent._id);
     
             io.to(caller.socketId).emit('join-meeting', { token: callerToken, roomId });
-            io.to(interpreter.socketId).emit('join-meeting', { token: interpreterToken, roomId });
+            io.to(agent.socketId).emit('join-meeting', { token: interpreterToken, roomId });
         });
     } catch (error) {
         console.error(error)
@@ -121,10 +121,10 @@ module.exports.disconnectionListener = (socket) => {
         socket.on('disconnect', async () => {
             console.log('Interpreter disconnected:', socket.id);
         
-            const interpreter = await Interpreter.findOne({ socketId: socket.id });
-            if (interpreter) {
+            const agent = await Agent.findOne({ socketId: socket.id });
+            if (agent) {
               // Optionally, remove from queue
-              availableInterpreters.removeInterpreterId(interpreter._id);
+              availableInterpreters.removeInterpreterId(agent._id);
             }
           });
     } catch (error) {
@@ -183,9 +183,6 @@ module.exports.sessionEndedListener = (socket) => {
                 
                 const endedAt = Date.now();
                 const duration = Math.floor((endedAt - startedAt) / 1000); // Convert ms to seconds
-                console.log('startedAt: ', startedAt)
-                console.log('endedAt: ', endedAt)
-                console.log('duration: ', duration)
 
                 await CallSession.findOneAndUpdate(
                     { roomId },

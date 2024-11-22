@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-const interpreterSchema = new mongoose.Schema({
+const agentSchema = new mongoose.Schema({
     email: {
         type: String,
         required: true,
@@ -57,12 +57,12 @@ const interpreterSchema = new mongoose.Schema({
 });
 
 // Method to match password with hashed password in DB
-interpreterSchema.methods.matchPassword = async function (enteredPassword) {
+agentSchema.methods.matchPassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 };
 
 // Method to generate JWT token
-interpreterSchema.methods.generateAuthToken = function () {
+agentSchema.methods.generateAuthToken = function () {
     const payload = {
         id: this._id,
         email: this.email,
@@ -72,7 +72,7 @@ interpreterSchema.methods.generateAuthToken = function () {
 };
 
 // Pre-save hook to hash the password before saving to DB
-interpreterSchema.pre('save', async function (next) {
+agentSchema.pre('save', async function (next) {
     if (!this.isModified('password')) {
         return next();
     }
@@ -80,6 +80,6 @@ interpreterSchema.pre('save', async function (next) {
     next();
 });
 
-const Interpreter = mongoose.model('Interpreter', interpreterSchema);
+const Agent = mongoose.model('Agent', agentSchema);
 
-module.exports = Interpreter;
+module.exports = Agent;
