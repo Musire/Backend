@@ -9,18 +9,16 @@ const getDashboard = async (req, res) => {
     const user = req.user; // From the protect middleware
     let dashboardData;
 
-    console.log(user)
-    
     if (user.role === 'agent') {
       let calls = await CallSession.find({ agent: user.id })
       console.log(calls)
       dashboardData = calls; // Your agent-specific dashboard logic here
     } else if (user.role === 'caller') {
-      // Fetch caller-specific dashboard data
-      dashboardData = {}; // Your caller-specific dashboard logic here
+      let calls = await CallSession.find({ caller: user.id })
+      dashboardData = calls; // Your caller-specific dashboard logic here
     }
 
-    res.json({ message: 'Dashboard data', data: dashboardData });
+    res.json({ message: 'Dashboard data', payload: dashboardData });
   } catch (err) {
     res.status(500).json({ message: 'Error fetching dashboard', error: err.message });
   }
@@ -46,7 +44,7 @@ const getProfile = async (req, res) => {
 
 // Register route - handles user registration (Agent or Caller)
 const register = async (req, res) => {
-  const { name, surname, email, password, role } = req.body;
+  const { role } = req.body;
 
   if (!['agent', 'caller'].includes(role)) {
     return res.status(400).json({ message: 'Invalid role' });
@@ -57,9 +55,9 @@ const register = async (req, res) => {
 
     // Create Agent or Caller based on the role
     if (role === 'agent') {
-      user = new Interpreter({ name, surname, email, password, role });
+      user = new Interpreter(req.body);
     } else if (role === 'caller') {
-      user = new Caller({ name, surname, email, password, role });
+      user = new Caller(req.body);
     }
 
     await user.save();

@@ -13,25 +13,37 @@ Content-Type: application/json
 }
 
 
-### Test login
+### Test login/agent
 
 POST http://localhost:4173/api/login
 Content-Type: application/json
 
 {
   "email": "auto@testing.com",
-  "password": "password"
+  "password": "pokemon"
 }
 
 
-### Test login
+
+### Test login/caller
+
+POST http://localhost:4173/api/login
+Content-Type: application/json
+
+{
+  "email": "caller@testing.com",
+  "password": "pokemon"
+}
+
+
+### Test dashboard endpoint
 
 GET http://localhost:4173/api/dashboard
 Content-Type: application/json
-Authorization: bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3MzZkY2ViMjZkZGQxZjg5YTM4MDI5MyIsImVtYWlsIjoiYXV0b0B0ZXN0aW5nLmNvbSIsInJvbGUiOiJhZ2VudCIsImlhdCI6MTczMTY0ODk3MCwiZXhwIjoxNzMxNjUyNTcwfQ.ssBypDY9YWFNMKbjT3kQ5XAGPbEXl2D-1kqqTv7xwD0
+Authorization: bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3MzY3ZDBjYjYwODA1ODliZDMzOGE5YiIsImVtYWlsIjoiY2FsbGVyQHRlc3RpbmcuY29tIiwicm9sZSI6ImNhbGxlciIsImlhdCI6MTczMjA1MzQ0MSwiZXhwIjoxNzMyMDU3MDQxfQ.gYMnEyzfyO9M2KLVGNpV2PsOpcnhT0L-2B6F1t5QBak
 
 
-### Test profile
+### Test profile endpoint
 
 GET http://localhost:4173/api/profile
 Content-Type: application/json
@@ -39,7 +51,7 @@ Authorization: bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3MzZkY2ViM
 
 
 
-### Test profile
+### Test change-password endpoint
 
 POST  http://localhost:4173/api/change-password
 Content-Type: application/json
@@ -49,4 +61,6 @@ Authorization: bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3MzZkY2ViM
   "currentPassword": "password2",
   "newPassword": "pokemon"
 }
+
+
 

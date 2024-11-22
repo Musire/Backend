@@ -48,6 +48,7 @@ module.exports.registerInterpreterListener = (socket) => {
 module.exports.placeCallListener = (socket, io) => {
     try {
         socket.on('place-call', async (callerId) => {
+            const callPlacedAt = Date.now()
 
             // Find an available interpreter
             const interpreterId = await availableInterpreters.getNextAvailableInterpreterId();
@@ -58,7 +59,7 @@ module.exports.placeCallListener = (socket, io) => {
       
             if (interpreter) {
               // Emit 'ringing' to the interpreter's socket
-              io.to(interpreter.socketId).emit('incoming-call', {callerId});
+              io.to(interpreter.socketId).emit('incoming-call', {callerId, callPlacedAt});
       
               // Notify the caller that the interpreter is being called
               console.log('call status sent to caller: ringing', interpreter.socketId)
@@ -78,11 +79,15 @@ module.exports.placeCallListener = (socket, io) => {
 
 module.exports.callAcceptedListener = (socket, io) => {
     try {
-        socket.on('call-accepted', async ({ callerId, interpreterId }) => {
+        socket.on('call-accepted', async ({ callerId, interpreterId, callPlacedAt }) => {
             const caller = await Caller.findById(callerId);
             const interpreter = await Interpreter.findById(interpreterId);
     
             if (!caller || !interpreter) return;
+
+            const callAcceptedAt = Date.now()
+
+            const waitTime = Math.floor((callAcceptedAt - callPlacedAt) / 1000)
     
             const roomId = await generateRoom(generateAuthToken('creator'));
     
@@ -91,7 +96,8 @@ module.exports.callAcceptedListener = (socket, io) => {
                 roomId,
                 caller: caller._id,          // Using ObjectId
                 agent: interpreter._id,       // Using ObjectId
-                createdAt: Date.now()
+                createdAt: Date.now(),
+                waitTime
             });
     
             await callSession.save();
@@ -129,6 +135,109 @@ module.exports.disconnectionListener = (socket) => {
 
 
 
+
+module.exports.agentJoinedListener = (socket) => {
+    try {
+        socket.on('agent-joined', async ({ roomId }) => {
+            await CallSession.findOneAndUpdate(
+                { roomId, agentJoinedAt: { $exists: false } },
+                { agentJoinedAt: Date.now() }
+            );
+        });
+    } catch (error) {
+        console.error(error);
+        throw new Error(error);
+    }
+}
+
+module.exports.callerJoinedListener = (socket) => {
+    try {
+        socket.on('caller-joined', async ({ roomId }) => {
+            await CallSession.findOneAndUpdate(
+                { roomId, callerJoinedAt: { $exists: false } },
+                { callerJoinedAt: Date.now() }
+            );
+        });
+    } catch (error) {
+        console.error(error);
+        throw new Error(error);
+    }
+}
+
+
+
+
+module.exports.sessionEndedListener = (socket) => {
+    try {
+        socket.on('session-ended', async ({ roomId }) => {
+            console.log('roomid: ', roomId)
+            const session = await CallSession.findOne({ roomId });
+
+            if (session) {
+
+                console.log(session)
+                const startedAt = Math.max(
+                    session.callerJoinedAt,
+                    session.agentJoinedAt
+                );
+                
+                const endedAt = Date.now();
+                const duration = Math.floor((endedAt - startedAt) / 1000); // Convert ms to seconds
+                console.log('startedAt: ', startedAt)
+                console.log('endedAt: ', endedAt)
+                console.log('duration: ', duration)
+
+                await CallSession.findOneAndUpdate(
+                    { roomId },
+                    {
+                        startedAt,
+                        endedAt,
+                        duration
+                    }
+                );
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        throw new Error(error);
+    }
+};
+
+
+module.exports.callerSurveyListener = (socket) => {
+    try {
+        socket.on('caller-survey', async ({ roomId, survey }) => {
+            await CallSession.findOneAndUpdate(
+                { roomId, callerSurvey: { $exists: false } }, // Check if callerSurvey doesn't exist
+                { callerSurvey: survey }
+            );
+        });
+    } catch (error) {
+        console.error(error);
+        throw new Error(error);
+    }
+};
+
+module.exports.agentSurveyListener = (socket) => {
+    try {
+        socket.on('agent-survey', async ({ roomId, survey }) => {
+            await CallSession.findOneAndUpdate(
+                { roomId, agentSurvey: { $exists: false } },
+                { agentSurvey: survey }
+            );
+        });
+    } catch (error) {
+        console.error(error);
+        throw new Error(error);
+    }
+}
+
+
+
+
+
+
+
 module.exports.unregisterListener = (socket) => {
     try {
 
@@ -147,105 +256,5 @@ module.exports.callRejectedListener = (socket) => {
         throw new Error(error)
     }
 }
-
-
-module.exports.callerJoinedListener = (socket) => {
-    try {
-        socket.on('caller-joined', async ({ roomId }) => {
-            await CallSession.findOneAndUpdate(
-                { roomId },
-                { callerJoinedAt: Date.now() }
-            );
-        });
-    } catch (error) {
-        console.error(error);
-        throw new Error(error);
-    }
-}
-
-module.exports.agentJoinedListener = (socket) => {
-    try {
-        socket.on('agent-joined', async ({ roomId }) => {
-            await CallSession.findOneAndUpdate(
-                { roomId },
-                { agentJoinedAt: Date.now() }
-            );
-        });
-    } catch (error) {
-        console.error(error);
-        throw new Error(error);
-    }
-}
-
-
-module.exports.sessionStartedListener = (socket) => {
-    try {
-        socket.on('session-started', async ({ roomId }) => {
-            await CallSession.findOneAndUpdate(
-                { roomId },
-                { sessionStartedAt: Date.now() }
-            );
-        });
-    } catch (error) {
-        console.error(error);
-        throw new Error(error);
-    }
-}
-
-
-
-module.exports.sessionEndedListener = (socket) => {
-    try {
-        socket.on('session-ended', async ({ roomId }) => {
-            const session = await CallSession.findOne({ roomId });
-
-            if (session) {
-                const endTime = Date.now();
-                const duration = endTime - session.sessionStartedAt;
-
-                await CallSession.findOneAndUpdate(
-                    { roomId },
-                    {
-                        sessionEndedAt: endTime,
-                        duration
-                    }
-                );
-            }
-        });
-    } catch (error) {
-        console.error(error);
-        throw new Error(error);
-    }
-}
-
-
-module.exports.callerSurveyListener = (socket) => {
-    try {
-        socket.on('caller-survey', async ({ roomId, survey }) => {
-            await CallSession.findOneAndUpdate(
-                { roomId },
-                { callerSurvey: survey }
-            );
-        });
-    } catch (error) {
-        console.error(error);
-        throw new Error(error);
-    }
-}
-
-module.exports.agentSurveyListener = (socket) => {
-    try {
-        socket.on('agent-survey', async ({ roomId, survey }) => {
-            await CallSession.findOneAndUpdate(
-                { roomId },
-                { agentSurvey: survey }
-            );
-        });
-    } catch (error) {
-        console.error(error);
-        throw new Error(error);
-    }
-}
-
 
 

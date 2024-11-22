@@ -25,10 +25,10 @@ const callSessionSchema = new mongoose.Schema({
     agentJoinedAt: {
         type: Date
     },
-    sessionStartedAt: {
+    startedAt: {
         type: Date
     },
-    sessionEndedAt: {
+    endedAt: {
         type: Date
     },
     duration: {
