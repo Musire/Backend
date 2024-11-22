@@ -68,7 +68,7 @@ agentSchema.methods.generateAuthToken = function () {
         email: this.email,
         role: this.role
     };
-    return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+    return jwt.sign(payload, process.env.JWT_SECRET);
 };
 
 // Pre-save hook to hash the password before saving to DB
