@@ -95,7 +95,7 @@ module.exports.callAcceptedListener = (socket, io) => {
             const callSession = new CallSession({
                 roomId,
                 caller: caller._id,          // Using ObjectId
-                agent: interpreter._id,       // Using ObjectId
+                agent: agent._id,       // Using ObjectId
                 createdAt: Date.now(),
                 waitTime
             });
