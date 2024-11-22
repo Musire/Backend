@@ -80,8 +80,13 @@ module.exports.placeCallListener = (socket, io) => {
 module.exports.callAcceptedListener = (socket, io) => {
     try {
         socket.on('call-accepted', async ({ callerId, interpreterId, callPlacedAt }) => {
+            console.log('call accepted')
+
+            console.log(callerId, interpreterId, callPlacedAt)
             const caller = await Caller.findById(callerId);
             const agent = await Agent.findById(interpreterId);
+
+
     
             if (!caller || !agent) return;
 
