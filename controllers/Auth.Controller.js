@@ -1,4 +1,4 @@
-const Interpreter = require('../models/Interpreter');
+const Agent = require('../models/Agent');
 const Caller = require('../models/Caller');
 const CallSession = require('../models/CallSession');
 
@@ -7,18 +7,15 @@ const getDashboard = async (req, res) => {
   try {
     // Return dashboard data for the authenticated user
     const user = req.user; // From the protect middleware
-    let dashboardData;
+    let payload;
 
     if (user.role === 'agent') {
-      let calls = await CallSession.find({ agent: user.id })
-      console.log(calls)
-      dashboardData = calls; // Your agent-specific dashboard logic here
+      payload = await CallSession.find({ agent: user.id })
     } else if (user.role === 'caller') {
-      let calls = await CallSession.find({ caller: user.id })
-      dashboardData = calls; // Your caller-specific dashboard logic here
+      payload = await CallSession.find({ caller: user.id })
     }
 
-    res.json({ message: 'Dashboard data', payload: dashboardData });
+    res.json({ message: 'Dashboard data', payload });
   } catch (err) {
     res.status(500).json({ message: 'Error fetching dashboard', error: err.message });
   }
@@ -28,15 +25,15 @@ const getDashboard = async (req, res) => {
 const getProfile = async (req, res) => {
   try {
     const user = req.user; // From the protect middleware
-    let profileData;
+    let payload;
 
     if (user.role === 'agent') {
-      profileData = await Interpreter.findById(user.id).select('-__v -password -role -socketId -status'); // Exclude password field
+      payload = await Agent.findById(user.id).select('-__v -password -role -socketId -status'); // Exclude password field
     } else if (user.role === 'caller') {
-      profileData = await Caller.findById(user.id).select('-password');
+      payload = await Caller.findById(user.id).select('-password');
     }
 
-    res.json({ message: 'Profile data', data: profileData });
+    res.json({ message: 'Profile data', payload });
   } catch (err) {
     res.status(500).json({ message: 'Error fetching profile', error: err.message });
   }
@@ -55,7 +52,7 @@ const register = async (req, res) => {
 
     // Create Agent or Caller based on the role
     if (role === 'agent') {
-      user = new Interpreter(req.body);
+      user = new Agent(req.body);
     } else if (role === 'caller') {
       user = new Caller(req.body);
     }
@@ -76,7 +73,7 @@ const login = async (req, res) => {
     
     // Find user by email
     
-    user = await Interpreter.findOne({ email });
+    user = await Agent.findOne({ email });
     if (!user) {
       user = await Caller.findOne({ email });
     }
@@ -108,7 +105,7 @@ const changePassword = async (req, res) => {
     
     // Find the user (Agent or Caller)
     if (user.role === 'agent') {
-      foundUser = await Interpreter.findById(user.id);
+      foundUser = await Agent.findById(user.id);
     } else if (user.role === 'caller') {
       foundUser = await Caller.findById(user.id);
     }
