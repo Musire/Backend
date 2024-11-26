@@ -175,12 +175,10 @@ module.exports.callerJoinedListener = (socket) => {
 module.exports.sessionEndedListener = (socket) => {
     try {
         socket.on('session-ended', async ({ roomId }) => {
-            console.log('roomid: ', roomId)
             const session = await CallSession.findOne({ roomId });
 
             if (session) {
 
-                console.log(session)
                 const startedAt = Math.max(
                     session.callerJoinedAt,
                     session.agentJoinedAt
