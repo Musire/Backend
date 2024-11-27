@@ -22,7 +22,7 @@ const generateAuthToken = (role, roomId="", participantId="") => {
           permissions: [permissions[role]],
           version: 2,
           roomId, 
-          participantId, 
+          participantId,
           roles: [role], 
         };
         

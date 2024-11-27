@@ -5,6 +5,10 @@ const callSessionSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    mode: { 
+        type: String, 
+        enum: ['audio', 'video']
+    },
     caller: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Caller',

@@ -48,7 +48,7 @@ module.exports.registerInterpreterListener = (socket) => {
 
 module.exports.placeCallListener = (socket, io) => {
     try {
-        socket.on('place-call', async (callerId) => {
+        socket.on('place-call', async (callerId, mode) => {
             const callPlacedAt = getTimestamp()
 
             // Find an available interpreter
@@ -60,7 +60,7 @@ module.exports.placeCallListener = (socket, io) => {
       
             if (agent) {
               // Emit 'ringing' to the interpreter's socket
-              io.to(agent.socketId).emit('incoming-call', {callerId, callPlacedAt});
+              io.to(agent.socketId).emit('incoming-call', {callerId, callPlacedAt, mode});
       
               // Notify the caller that the interpreter is being called
               console.log('call status sent to caller: ringing', agent.socketId)
@@ -80,14 +80,12 @@ module.exports.placeCallListener = (socket, io) => {
 
 module.exports.callAcceptedListener = (socket, io) => {
     try {
-        socket.on('call-accepted', async ({ callerId, interpreterId, callPlacedAt }) => {
+        socket.on('call-accepted', async ({ callerId, interpreterId, callPlacedAt, mode }) => {
             console.log('call accepted')
 
             console.log(callerId, interpreterId, callPlacedAt)
             const caller = await Caller.findById(callerId);
             const agent = await Agent.findById(interpreterId);
-
-
     
             if (!caller || !agent) return;
 
@@ -100,6 +98,7 @@ module.exports.callAcceptedListener = (socket, io) => {
             // Create and save a CallSession with ObjectIds
             const callSession = new CallSession({
                 roomId,
+                mode,
                 caller: caller._id,          // Using ObjectId
                 agent: agent._id,       // Using ObjectId
                 createdAt: getTimestamp(),
