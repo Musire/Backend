@@ -3,6 +3,7 @@ const Caller = require("../models/Caller")
 const CallSession = require("../models/CallSession")
 const availableInterpreters = require('../queues/AvailableInterpreters')
 const { generateAuthToken, generateRoom } = require('../helper/generator');
+const { getTimestamp } = require("../helper/moment")
 
 module.exports.registerCallerListener = (socket) => {
     try {
@@ -48,7 +49,7 @@ module.exports.registerInterpreterListener = (socket) => {
 module.exports.placeCallListener = (socket, io) => {
     try {
         socket.on('place-call', async (callerId) => {
-            const callPlacedAt = Date.now()
+            const callPlacedAt = getTimestamp()
 
             // Find an available interpreter
             const interpreterId = await availableInterpreters.getNextAvailableInterpreterId();
@@ -90,7 +91,7 @@ module.exports.callAcceptedListener = (socket, io) => {
     
             if (!caller || !agent) return;
 
-            const callAcceptedAt = Date.now()
+            const callAcceptedAt = getTimestamp()
 
             const waitTime = Math.floor((callAcceptedAt - callPlacedAt) / 1000)
     
@@ -101,7 +102,7 @@ module.exports.callAcceptedListener = (socket, io) => {
                 roomId,
                 caller: caller._id,          // Using ObjectId
                 agent: agent._id,       // Using ObjectId
-                createdAt: Date.now(),
+                createdAt: getTimestamp(),
                 waitTime
             });
     
@@ -146,7 +147,7 @@ module.exports.agentJoinedListener = (socket) => {
         socket.on('agent-joined', async ({ roomId }) => {
             await CallSession.findOneAndUpdate(
                 { roomId, agentJoinedAt: { $exists: false } },
-                { agentJoinedAt: Date.now() }
+                { agentJoinedAt: getTimestamp() }
             );
         });
     } catch (error) {
@@ -160,7 +161,7 @@ module.exports.callerJoinedListener = (socket) => {
         socket.on('caller-joined', async ({ roomId }) => {
             await CallSession.findOneAndUpdate(
                 { roomId, callerJoinedAt: { $exists: false } },
-                { callerJoinedAt: Date.now() }
+                { callerJoinedAt: getTimestamp() }
             );
         });
     } catch (error) {
@@ -184,7 +185,7 @@ module.exports.sessionEndedListener = (socket) => {
                     session.agentJoinedAt
                 );
                 
-                const endedAt = Date.now();
+                const endedAt = getTimestamp();
                 const duration = Math.floor((endedAt - startedAt) / 1000); // Convert ms to seconds
 
                 await CallSession.findOneAndUpdate(

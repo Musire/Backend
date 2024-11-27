@@ -6,4 +6,4 @@ const getTimestamp = () => {
     return localTimestamp
 };
 
-module.exports = getTimestamp;
+module.exports = { getTimestamp };
