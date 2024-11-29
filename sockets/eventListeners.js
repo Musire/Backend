@@ -221,19 +221,24 @@ module.exports.callerSurveyListener = (socket) => {
 module.exports.agentSurveyListener = (socket) => {
     try {
         socket.on('agent-survey', async ({ roomId, survey }) => {
+            const { testCall, failedCall, ...rest } = survey;
+
             await CallSession.findOneAndUpdate(
                 { roomId, agentSurvey: { $exists: false } },
-                { agentSurvey: survey }
+                {
+                    $set: {
+                        agentSurvey: rest,
+                        isFailed: failedCall,
+                        isTest: testCall
+                    }
+                }
             );
         });
     } catch (error) {
         console.error(error);
-        throw new Error(error);
+        throw new Error(error.message); 
     }
-}
-
-
-
+};
 
 
 
