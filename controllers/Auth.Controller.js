@@ -1,6 +1,11 @@
 const Agent = require('../models/Agent');
 const Caller = require('../models/Caller');
 const CallSession = require('../models/CallSession');
+const Session = require('../models/Session');
+const { generateAccessToken, generateRefreshToken, verifyRefreshToken } = require('../helper/jwtUtils');
+const { getTimestamp } = require("../helper/moment");
+const mongoose = require('mongoose');
+
 
 // Dashboard route - returns dashboard info (protected)
 const getDashboard = async (req, res) => {
@@ -70,30 +75,77 @@ const login = async (req, res) => {
 
   try {
     let user;
-    
-    // Find user by email
-    
+
+    // Find user by email (either Agent or Caller)
     user = await Agent.findOne({ email });
     if (!user) {
       user = await Caller.findOne({ email });
     }
-    
 
     if (!user) {
       return res.status(400).json({ message: 'User not found' });
     }
 
+    // Compare password (assuming you have a matchPassword method on both models)
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    const token = user.generateAuthToken(); // JWT token generation
-    res.json({ message: 'Login successful', token });
+    // Generate session ID and JWTs
+    const sessionId = new mongoose.Types.ObjectId(); // Create a unique session ID
+    const accessToken = generateAccessToken(user._id, sessionId);
+    const refreshToken = generateRefreshToken(user._id, sessionId);
+
+    // Invalidate any existing active session for the user
+    await Session.updateOne({ userId: user._id, isActive: true }, { $set: { isActive: false } });
+
+    // Store new session with both tokens
+    const newSession = new Session({
+      userId: user._id,
+      jwt: accessToken,
+      refreshToken: refreshToken,
+      sessionId: sessionId.toString(),
+      device: req.headers['user-agent'], // Store device info
+      isActive: true,
+      expiresAt: getTimestamp() +  (24 * 60 * 60 * 1000), // Set expiresAt for 1 days
+    });
+
+    await newSession.save();
+    let payload = { accessToken, refreshToken }
+
+    // Send both access and refresh tokens to the client
+    res.json({
+      message: 'Login successful', payload
+    });
   } catch (err) {
     res.status(500).json({ message: 'Error logging in', error: err.message });
   }
 };
+
+const tokenRefresh = async (req, res) => {
+  const { refreshToken } = req.cookies;
+
+  if (!refreshToken) {
+    return res.status(401).send('Refresh token is required');
+  }
+
+  try {
+    const decoded = verifyRefreshToken(refreshToken); // Verify the refresh token
+    const session = await Session.findOne({ refreshToken });
+
+    if (!session || session.userId.toString() !== decoded.userId.toString()) {
+      return res.status(403).send('Invalid refresh token');
+    }
+
+    // Generate a new access token
+    const newAccessToken = generateAccessToken(decoded.userId, decoded.sessionId);
+
+    res.json({ payload: newAccessToken });
+  } catch (err) {
+    res.status(403).send('Invalid or expired refresh token');
+  }
+}
 
 // Change Password route (protected)
 const changePassword = async (req, res) => {
@@ -123,4 +175,4 @@ const changePassword = async (req, res) => {
   }
 };
 
-module.exports = { register, login, changePassword, getDashboard, getProfile };
+module.exports = { register, login, changePassword, getDashboard, getProfile, tokenRefresh };
