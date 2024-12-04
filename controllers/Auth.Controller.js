@@ -31,6 +31,7 @@ const getProfile = async (req, res) => {
   try {
     const user = req.user; // From the protect middleware
     let payload;
+    
 
     if (user.role === 'agent') {
       payload = await Agent.findById(user.id).select('-__v -password -role -socketId -status'); // Exclude password field
@@ -39,6 +40,26 @@ const getProfile = async (req, res) => {
     }
 
     res.json({ message: 'Profile data', payload });
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching profile', error: err.message });
+  }
+};
+
+const getSettings = async (req, res) => {
+  try {
+    const user = req.user; // From the protect middleware
+    let payload;
+    let tempUser;
+
+    if (user.role === 'agent') {
+      tempUser = await Agent.findById(user.id); // Exclude password field
+    } else if (user.role === 'caller') {
+      tempUser = await Caller.findById(user.id)
+    }
+
+    payload = tempUser.settings
+
+    res.json({ message: 'Settings data', payload });
   } catch (err) {
     res.status(500).json({ message: 'Error fetching profile', error: err.message });
   }
@@ -94,8 +115,8 @@ const login = async (req, res) => {
 
     // Generate session ID and JWTs
     const sessionId = new mongoose.Types.ObjectId(); // Create a unique session ID
-    const accessToken = generateAccessToken(user._id, sessionId);
-    const refreshToken = generateRefreshToken(user._id, sessionId);
+    const accessToken = generateAccessToken(user._id, user.role, sessionId);
+    const refreshToken = generateRefreshToken(user._id, user.role, sessionId);
 
     // Invalidate any existing active session for the user
     await Session.updateOne({ userId: user._id, isActive: true }, { $set: { isActive: false } });
@@ -112,7 +133,12 @@ const login = async (req, res) => {
     });
 
     await newSession.save();
-    let payload = { accessToken, refreshToken }
+    res.cookie('refreshToken', refreshToken, {
+      maxAge: (1000 * 60 * 60 * 24), // 1 hour
+      httpOnly: true, // Accessible only by the server
+      sameSite: 'lax' // Restrict cross-site requests
+    });
+    let payload = { accessToken }
 
     // Send both access and refresh tokens to the client
     res.json({
@@ -175,4 +201,4 @@ const changePassword = async (req, res) => {
   }
 };
 
-module.exports = { register, login, changePassword, getDashboard, getProfile, tokenRefresh };
+module.exports = { register, login, changePassword, getDashboard, getProfile, tokenRefresh, getSettings };

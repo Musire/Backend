@@ -6,7 +6,7 @@ module.exports.setupSocket = (io) => {
     // Register caller
     registerCallerListener(socket)
     // Register interpreter
-    registerInterpreterListener(socket)
+    registerInterpreterListener(socket, io)
     // Handle "place-call" event from caller
     placeCallListener(socket, io)
     // Handle "call-accepted" event from agent

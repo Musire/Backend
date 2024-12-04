@@ -40,6 +40,16 @@ const agentSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     },
+    settings: {
+        ringDeviceId: {
+            type: String,
+            default: ""
+        },
+        ringtoneAudio: {
+            type: Number,
+            default: 1
+        }
+    },
     paperwork: {
         hipaa: {
             type: Boolean,

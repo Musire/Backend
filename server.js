@@ -12,25 +12,34 @@ const { setupSocket } = require('./sockets/socketHandler')
 // instantiate express server as app
 const app = express();
 const server = http.createServer(app);
+const allowedOrigins = ['http://localhost:5173', 'https://neoteric-ls.netlify.app']
+
 const io = socketIo(server, {
   cors: {
-      origin: '*', // Allow any origin
-      methods: ['GET', 'POST'],
-      credentials: true, // Allow credentials if needed
-  }
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: ['GET', 'POST'],
+  },
 });
 
 // Enable CORS for Express routes
 app.use(cors({
-  origin: '*', // Allow any origin
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST'],
+  credentials: true, // If you plan to use cookies/auth
 }));
 
-app.use(function(req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-  next();
-});
 
 // Bodyparser middleware
 app.use( bodyParser.urlencoded({ extended: false }) );

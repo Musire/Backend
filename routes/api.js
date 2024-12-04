@@ -1,5 +1,5 @@
 const { protect } = require('../middleware/auth.middleware');
-const { register, login, changePassword, getDashboard, getProfile, tokenRefresh } = require('../controllers/Auth.Controller');
+const { register, login, changePassword, getDashboard, getProfile, tokenRefresh, getSettings } = require('../controllers/Auth.Controller');
 
 const { Router } = require('express');
 const router = Router();
@@ -15,6 +15,9 @@ router.get('/dashboard', protect, getDashboard);
 
 // Route for getting the user profile (protected)
 router.get('/profile', protect, getProfile);
+
+// Route for getting the user profile (protected)
+router.get('/settings', protect, getSettings);
 
 // Route for changing the password (protected)
 router.post('/refresh-token', protect, tokenRefresh);

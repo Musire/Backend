@@ -15,7 +15,7 @@ const protect = async (req, res, next) => {
     return next(); // Proceed to the next middleware/route handler
   } catch (err) {
     // If the access token is expired, attempt to refresh it using the refresh token
-    const refreshToken = req.cookies.refreshToken;
+    const refreshToken = req.cookies?.refreshToken;
 
     if (!refreshToken) {
       return res.status(403).send('Refresh token required');

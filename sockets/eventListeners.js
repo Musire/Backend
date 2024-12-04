@@ -1,7 +1,8 @@
 const Agent = require('../models/Agent'); // Import Interpreter model
 const Caller = require("../models/Caller")
 const CallSession = require("../models/CallSession")
-const availableInterpreters = require('../queues/AvailableInterpreters')
+const { pairAgentToCall, pairCallToAgent } = require('../queues/CheckQueues')
+const { addAgent, addCall, printAgentQueue, printCallQueue, removeAgent } = require('../queues/QueueUtility')
 const { generateAuthToken, generateRoom } = require('../helper/generator');
 const { getTimestamp } = require("../helper/moment")
 
@@ -24,7 +25,7 @@ module.exports.registerCallerListener = (socket) => {
 };
 
 
-module.exports.registerInterpreterListener = (socket) => {
+module.exports.registerInterpreterListener = (socket, io) => {
     try {
         socket.on('register-interpreter', async ({ interpreterId }) => {
             const agent = await Agent.findById(interpreterId);
@@ -33,9 +34,10 @@ module.exports.registerInterpreterListener = (socket) => {
                 await agent.save();
                 
                 // Add interpreter to the queue of available interpreters
-                availableInterpreters.addInterpreterId(interpreterId);
+                let timestamp = getTimestamp()
+                await addAgent({ agentId: interpreterId, agentSocketId: agent.socketId, timestamp })
                 
-                console.log(`Interpreter ${interpreterId} registered and added to queue`);
+                // await pairAgentToCall(io)
             } else {
                 console.error(`Interpreter with ID ${interpreterId} not found`);
             }
@@ -49,26 +51,19 @@ module.exports.registerInterpreterListener = (socket) => {
 module.exports.placeCallListener = (socket, io) => {
     try {
         socket.on('place-call', async (callerId, mode) => {
-            const callPlacedAt = getTimestamp()
 
-            // Find an available interpreter
-            const interpreterId = await availableInterpreters.getNextAvailableInterpreterId();
-      
-            console.log('queue produced id: ', interpreterId)
-      
-            const agent = await Agent.findById(interpreterId)
-      
-            if (agent) {
-              // Emit 'ringing' to the interpreter's socket
-              io.to(agent.socketId).emit('incoming-call', {callerId, callPlacedAt, mode});
-      
-              // Notify the caller that the interpreter is being called
-              console.log('call status sent to caller: ringing', agent.socketId)
-              io.to(socket.id).emit('call-status', { status: 'Ringing' });
-            } else {
-              // No interpreters available, notify the caller
-              console.log('call status sent to caller: no available interpreters')
-              io.to(socket.id).emit('call-status', { status: 'No available interpreters' });
+            const caller = await Caller.findById(callerId);
+            if (caller) {
+                const call = {
+                    callerId,
+                    tier: 1,
+                    mode,
+                    callPlacedAt: getTimestamp(),
+                    callerSocketId: caller.socketId
+                }
+                await addCall(call)
+    
+                await pairCallToAgent(io)
             }
           });
     } catch (error) {
@@ -129,7 +124,7 @@ module.exports.disconnectionListener = (socket) => {
             const agent = await Agent.findOne({ socketId: socket.id });
             if (agent) {
               // Optionally, remove from queue
-              availableInterpreters.removeInterpreterId(agent._id);
+              await removeAgent(socket.id)
             }
           });
     } catch (error) {
