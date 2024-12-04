@@ -56,6 +56,8 @@ app.use(express.json());
 // setIoInstance(io); // Set the io instance for the routes
 app.use('/api', router);
 
+// Attach io to the app object
+app.set('io', io);
 
 // Setup Socket.IO
 setupSocket(io);

@@ -2,7 +2,7 @@ const Agent = require('../models/Agent'); // Import Interpreter model
 const Caller = require("../models/Caller")
 const CallSession = require("../models/CallSession")
 const { pairAgentToCall, pairCallToAgent } = require('../queues/CheckQueues')
-const { addAgent, addCall, printAgentQueue, printCallQueue, removeAgent } = require('../queues/QueueUtility')
+const { addAgent, addCall, removeAgent } = require('../queues/QueueUtility')
 const { generateAuthToken, generateRoom } = require('../helper/generator');
 const { getTimestamp } = require("../helper/moment")
 
@@ -14,7 +14,7 @@ module.exports.registerCallerListener = (socket) => {
                 caller.socketId = socket.id; // Update socket ID for the caller
                 await caller.save();
                 
-                console.log(`Caller ${callerId} registered`);
+                console.log(`Caller ${socket.id} registered`);
             } else {
                 console.error(`Caller with ID ${callerId} not found`);
             }
@@ -32,6 +32,8 @@ module.exports.registerInterpreterListener = (socket, io) => {
             if (agent) {
                 agent.socketId = socket.id; // Update socket ID for the interpreter
                 await agent.save();
+
+                console.log(`Agent ${socket.id} registered`);
                 
                 // Add interpreter to the queue of available interpreters
                 let timestamp = getTimestamp()
@@ -119,12 +121,23 @@ module.exports.callAcceptedListener = (socket, io) => {
 module.exports.disconnectionListener = (socket) => {
     try {
         socket.on('disconnect', async () => {
-            console.log('Interpreter disconnected:', socket.id);
-        
-            const agent = await Agent.findOne({ socketId: socket.id });
-            if (agent) {
-              // Optionally, remove from queue
-              await removeAgent(socket.id)
+            console.log('user disconnected:', socket.id);
+            let agent; 
+
+            agent = await Caller.findOne({ socketId: socket.id })
+            if (!agent) {
+                agent = await Agent.findOne({ socketId: socket.id })
+            }
+
+            if (!agent) {
+                return console.log(`socketId: ${socket.id} not found`)
+            }
+
+            agent.socketId = null
+            await agent.save()
+
+            if (agent.role === 'agent') {
+                await removeAgent(socket.id)
             }
           });
     } catch (error) {

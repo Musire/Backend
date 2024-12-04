@@ -113,6 +113,13 @@ const login = async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
+    // Emit disconnect event if the user already has an active session
+    if (user.socketId) {
+      console.log('user forced disconnected', user.socketId)
+      const io = req.app.get('io'); // Assuming you have added `io` to the app instance
+      io.to(user.socketId).emit('force-disconnect', { message: 'Session terminated due to a new login' });
+    } 
+
     // Generate session ID and JWTs
     const sessionId = new mongoose.Types.ObjectId(); // Create a unique session ID
     const accessToken = generateAccessToken(user._id, user.role, sessionId);

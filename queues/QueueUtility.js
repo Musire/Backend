@@ -2,24 +2,18 @@ const { agentQueue, callQueue } = require('./queues');
 
 
 const addAgent = async (info) => {
-  let queue = agentQueue.getQueue()
-  console.log('queue before adding agent: ', queue)
+  // let queue = agentQueue.getQueue()
+  // console.log('queue before adding agent: ', queue)
   await agentQueue.insert(info)
-  console.log('queue after adding agent: ', queue)
+  // console.log('queue after adding agent: ', queue)
 }
 
 const removeAgent = async (info) => {
-  let queue = agentQueue.getQueue()
-  console.log('queue before removing agent: ', queue)
   await agentQueue.removeAgent(info)
-  console.log('queue after removing agent: ', queue)
 }
 
 const addCall = async (info) => {
-  let queue = callQueue.getQueue()
-  console.log('queue before adding call: ', queue)
   await callQueue.insert(info)
-  console.log('queue after adding call: ', queue)
 }
 
 const getAvailableAgent = async () => {
