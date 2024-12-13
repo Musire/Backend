@@ -1,6 +1,9 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const Document  = require('./Document')
+const { callerDocuments } = require("../helper/objectConfig")
+
 
 const callerSchema = new mongoose.Schema({
     email: {
@@ -20,15 +23,6 @@ const callerSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    role: {
-        type: String,
-        required: true
-    },
-    billingType: {
-        type: String,
-        enum: ['on demand', 'bundle'],
-        required: true
-    },
     socketId: { 
         type: String, 
         default: ""
@@ -38,25 +32,48 @@ const callerSchema = new mongoose.Schema({
         enum: ['available', 'in-call', 'post-call', 'unavailable'], 
         default: 'unavailable' 
     },
-    joinedDate: {
-        type: Date,
-        default: Date.now
+    profile : {
+        joinedDate: {
+            type: Date,
+            default: Date.now
+        },
+        role: {
+            type: String,
+            required: true
+        },
+        team: {
+            type: String,
+            required: true
+        },
+        currentState: {
+            type: String,
+            enum: ['active', 'unactive', 'pending']
+        },
     },
-    paperwork: {
-        hipaa: {
-            type: Boolean,
-            default: false
+    settings: {
+        billingType: {
+            type: String,
+            enum: ['on demand', 'bundle'],
+            required: true
         },
-        contracts: {
-            type: Boolean,
-            default: false
-        },
-        userAgreement: {
-            type: Boolean,
-            default: false
+        preferredCommunication: {
+            type: String,
+            enum: ['email', 'phone call', 'messaging']
         }
-    }
+    },
+    paperwork: { type: [Document.schema], default: () => callerDocuments },
 });
+
+// Virtual Property for Profile Completion
+callerSchema.virtual('profileCompletion').get(function () {
+    const totalDocuments = 13; // Total required documents
+    const signedDocuments = Object.values(this.paperwork).filter(doc => doc.status === 'signed').length;
+    const percentage = Math.round((signedDocuments / totalDocuments) * 100);
+
+    // Return progress percentage or a status
+    return `${percentage}%`;
+});
+
 
 // Method to match password with hashed password in DB
 callerSchema.methods.matchPassword = async function (enteredPassword) {
@@ -68,7 +85,7 @@ callerSchema.methods.generateAuthToken = function () {
     const payload = {
         id: this._id,
         email: this.email,
-        role: this.role
+        role: this.profile.role
     };
     return jwt.sign(payload, process.env.JWT_SECRET);
 };

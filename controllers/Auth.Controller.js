@@ -30,14 +30,20 @@ const getDashboard = async (req, res) => {
 const getProfile = async (req, res) => {
   try {
     const user = req.user; // From the protect middleware
+    let tempUser;
     let payload;
     
 
     if (user.role === 'agent') {
-      payload = await Agent.findById(user.id).select('-__v -password -role -socketId -status'); // Exclude password field
+      tempUser = await Agent.findById(user.id); // Exclude password field
     } else if (user.role === 'caller') {
-      payload = await Caller.findById(user.id).select('-password');
+      tempUser = await Caller.findById(user.id)
     }
+
+    payload = tempUser?.profile
+    payload = {...payload, profileCompletion: tempUser?.profileCompletion}
+
+    console.log(tempUser.profileCompletion)
 
     res.json({ message: 'Profile data', payload });
   } catch (err) {
@@ -53,17 +59,39 @@ const getSettings = async (req, res) => {
 
     if (user.role === 'agent') {
       tempUser = await Agent.findById(user.id); // Exclude password field
+      payload = tempUser.settings
     } else if (user.role === 'caller') {
       tempUser = await Caller.findById(user.id)
+      payload = tempUser.settings.billingType
     }
-
-    payload = tempUser.settings
 
     res.json({ message: 'Settings data', payload });
   } catch (err) {
     res.status(500).json({ message: 'Error fetching profile', error: err.message });
   }
 };
+
+
+const getDocuments = async (req, res) => {
+  try {
+    const user = req.user; // From the protect middleware
+    let payload;
+    let tempUser;
+
+    if (user.role === 'agent') {
+      tempUser = await Agent.findById(user.id); 
+    } else if (user.role === 'caller') {
+      tempUser = await Caller.findById(user.id)
+    }
+
+    payload = tempUser.paperwork
+
+    res.json({ message: 'Settings data', payload });
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching profile', error: err.message });
+  }
+};
+
 
 // Register route - handles user registration (Agent or Caller)
 const register = async (req, res) => {
@@ -122,8 +150,8 @@ const login = async (req, res) => {
 
     // Generate session ID and JWTs
     const sessionId = new mongoose.Types.ObjectId(); // Create a unique session ID
-    const accessToken = generateAccessToken(user._id, user.role, sessionId);
-    const refreshToken = generateRefreshToken(user._id, user.role, sessionId);
+    const accessToken = generateAccessToken(user._id, user.profile.role, sessionId);
+    const refreshToken = generateRefreshToken(user._id, user.profile.role, sessionId);
 
     // Invalidate any existing active session for the user
     await Session.updateOne({ userId: user._id, isActive: true }, { $set: { isActive: false } });
@@ -208,4 +236,4 @@ const changePassword = async (req, res) => {
   }
 };
 
-module.exports = { register, login, changePassword, getDashboard, getProfile, tokenRefresh, getSettings };
+module.exports = { register, login, changePassword, getDashboard, getProfile, tokenRefresh, getSettings, getDocuments };

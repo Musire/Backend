@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const Document  = require('./Document')
+const { agentDocuments } = require("../helper/objectConfig")
 
 const agentSchema = new mongoose.Schema({
     email: {
@@ -20,13 +22,6 @@ const agentSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    role: {
-        type: String,
-        required: true
-    },
-    payRate: {
-        type: Number
-    },
     socketId: { 
         type: String, 
         default: ""
@@ -36,9 +31,26 @@ const agentSchema = new mongoose.Schema({
         enum: ['available', 'in-call', 'post-call', 'unavailable'], 
         default: 'unavailable' 
     },
-    joinedDate: {
-        type: Date,
-        default: Date.now
+    profile : {
+        joinedDate: {
+            type: Date,
+            default: Date.now
+        },
+        role: {
+            type: String,
+            required: true
+        },
+        team: {
+            type: String,
+            required: true
+        },
+        currentState: {
+            type: String,
+            enum: ['active', 'unactive', 'pending']
+        },
+        payRate: {
+            type: Number
+        },
     },
     settings: {
         ringDeviceId: {
@@ -48,22 +60,23 @@ const agentSchema = new mongoose.Schema({
         ringtoneAudio: {
             type: Number,
             default: 1
+        },
+        preferredCommunication: {
+            type: String,
+            enum: ['email', 'phone call', 'messaging']
         }
     },
-    paperwork: {
-        hipaa: {
-            type: Boolean,
-            default: false
-        },
-        contracts: {
-            type: Boolean,
-            default: false
-        },
-        userAgreement: {
-            type: Boolean,
-            default: false
-        }
-    }
+    paperwork: { type: [Document.schema], default: () => agentDocuments }
+});
+
+// Virtual Property for Profile Completion
+agentSchema.virtual('profileCompletion').get(function () {
+    const totalDocuments = 17; // Total required documents
+    const signedDocuments = Object.values(this.paperwork).filter(doc => doc.status === 'signed').length;
+    const percentage = Math.round((signedDocuments / totalDocuments) * 100);
+
+    // Return progress percentage or a status
+    return `${percentage}%`;
 });
 
 // Method to match password with hashed password in DB
@@ -76,7 +89,7 @@ agentSchema.methods.generateAuthToken = function () {
     const payload = {
         id: this._id,
         email: this.email,
-        role: this.role
+        role: this.profile.role
     };
     return jwt.sign(payload, process.env.JWT_SECRET);
 };
