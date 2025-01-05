@@ -1,4 +1,4 @@
-const { agentQueue, callQueue } = require('./queues');
+const { agentQueue, callQueue } = require('./Queues');
 const limbo = require('./Reservation')
 
 
