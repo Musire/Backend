@@ -87,7 +87,7 @@ callerSchema.methods.generateAuthToken = function () {
         email: this.email,
         role: this.profile.role
     };
-    return jwt.sign(payload, process.env.JWT_SECRET);
+    return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1d' });
 };
 
 // Pre-save hook to hash the password before saving to DB

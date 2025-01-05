@@ -5,14 +5,48 @@ const Session = require('../models/Session');
 const { generateAccessToken, generateRefreshToken, verifyRefreshToken } = require('../helper/jwtUtils');
 const { getTimestamp } = require("../helper/moment");
 const mongoose = require('mongoose');
+const { Documents } = require("../static/Documents")
 
+
+const getDocumentContent = async (req, res) => {
+  try {
+    let userDoc;
+    const user = req.user
+    const { name } = req.params
+    let docName = name.toLowerCase()
+
+    if (user.role === 'agent') {
+      userDoc = await Agent.findById(user.id)
+    } else if (user.role === 'caller') {
+      userDoc = await Caller.findById(user.id)
+    }
+
+    let chosenDoc = Documents[docName]
+    const { content, index } = chosenDoc
+    const status = userDoc?.paperwork[index]?.status
+    const dateSigned = userDoc?.paperwork[index]?.signedDate
+    let isSigned = (status === 'signed') ? dateSigned : "pending"
+
+    res.status(200).json({ 
+      message: "successfully got document contents", 
+      payload: {
+        content,
+        isSigned
+      }
+    })
+    
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching dashboard', error: err.message });
+  }
+}
 
 // Dashboard route - returns dashboard info (protected)
 const getDashboard = async (req, res) => {
   try {
-    // Return dashboard data for the authenticated user
+    console.log('route getDashboard triggerred')
     const user = req.user; // From the protect middleware
     let payload;
+
 
     if (user.role === 'agent') {
       payload = await CallSession.find({ agent: user.id })
@@ -42,8 +76,6 @@ const getProfile = async (req, res) => {
 
     payload = tempUser?.profile
     payload = {...payload, profileCompletion: tempUser?.profileCompletion}
-
-    console.log(tempUser.profileCompletion)
 
     res.json({ message: 'Profile data', payload });
   } catch (err) {
@@ -236,4 +268,4 @@ const changePassword = async (req, res) => {
   }
 };
 
-module.exports = { register, login, changePassword, getDashboard, getProfile, tokenRefresh, getSettings, getDocuments };
+module.exports = { register, login, changePassword, getDashboard, getProfile, tokenRefresh, getSettings, getDocuments, getDocumentContent };

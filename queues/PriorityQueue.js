@@ -4,13 +4,14 @@ class Mutex {
       this.locked = false;
     }
   
-    lock() {
+    async lock() {
       const ticket = new Promise((resolve) => this.queue.push(resolve));
       if (!this.locked) {
         this.locked = true;
-        this.queue.shift()?.();
+        this.queue.shift()?.(); // Resolve the first promise
       }
-      return ticket;
+      await ticket; // Wait for the lock to be released
+      return () => this.unlock(); // Return a release function
     }
   
     unlock() {
@@ -28,22 +29,28 @@ class Mutex {
       this.compare = compareFn || ((a, b) => a - b); // Default to a min-heap
       this.mutex = new Mutex();
     }
-  
-    async insert(element) {
-      await this.mutex.lock();
+
+
+    async withLock(fn) {
+      const release = await this.mutex.lock(); // Acquire the lock
       try {
-        this.heap.push(element);
-        this.heapifyUp();
+        return await fn(); // Execute the provided function
       } finally {
-        this.mutex.unlock();
+        release(); // Always release the lock
       }
     }
   
+    async insert(element) {
+      return this.withLock(() => {
+        this.heap.push(element);
+        this.heapifyUp();
+      });
+    }
+  
     async remove() {
-      await this.mutex.lock();
-      try {
+      return this.withLock(() => {
         if (this.heap.length === 0) {
-          throw new Error("Heap is empty");
+          return console.log("Heap is empty");
         }
   
         const min = this.heap[0];
@@ -51,18 +58,15 @@ class Mutex {
         this.heap.pop();
         this.heapifyDown();
         return min;
-      } finally {
-        this.mutex.unlock();
-      }
+      });
     }
 
-    async removeAgent(targetId) {
-      await this.mutex.lock();
-      try {
+    async delete(targetId) {
+      return this.withLock(() => {
         const index = this.heap.findIndex(agent => agent.agentSocketId === targetId);
   
         if (index === -1) {
-          throw new Error(`Agent with ID ${targetId} not found`);
+          return console.log(`Agent with ID ${targetId} not found`);
         }
   
         // Remove the agent
@@ -72,14 +76,20 @@ class Mutex {
         // Re-heapify after removal
         this.heapifyUp(index); // If the element was moved up
         this.heapifyDown(index); // If the element was moved down
-  
-      } finally {
-        this.mutex.unlock();
-      }
+      });
     }
 
-    getQueue() {
-      return this.heap 
+    async peek() {
+      return this.withLock(() => {
+        if (this.isEmpty()) return null;
+        return this.heap[0];
+      });
+    }
+
+    async getQueue() {
+      return this.withLock(() => {
+        return this.heap
+      });
     }
 
     isEmpty() {

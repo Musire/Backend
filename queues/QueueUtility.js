@@ -1,62 +1,82 @@
 const { agentQueue, callQueue } = require('./queues');
+const limbo = require('./Reservation')
 
 
-const addAgent = async (info) => {
-  // let queue = agentQueue.getQueue()
-  // console.log('queue before adding agent: ', queue)
-  await agentQueue.insert(info)
-  // console.log('queue after adding agent: ', queue)
+const addAgent = async (agent) => {
+  await agentQueue.insert(agent)
 }
 
-const removeAgent = async (info) => {
-  await agentQueue.removeAgent(info)
+const dequeAgent = async (agent) => {
+  await agentQueue.delete(agent)
 }
 
-const addCall = async (info) => {
-  await callQueue.insert(info)
+const nextAgent = async () => {
+  return await agentQueue.peek()
 }
 
-const getAvailableAgent = async () => {
-  let queue = agentQueue.getQueue()
-  console.log('current agent queue: ', queue)
-  if (!agentQueue.isEmpty()) {
-    return await agentQueue.remove();
+const retrieveAgent = async () => {
+  return await agentQueue.remove()
+}
+
+const addCall = async (call) => {
+  await callQueue.insert(call)
+}
+
+const dequeCall = async (agent) => {
+  await callQueue.delete(agent)
+}
+
+const nextCall = async () => {
+  return await callQueue.peek()
+}
+
+const retrieveCall = async () => {
+  return await callQueue.remove()
+}
+
+
+
+const pairCall = async (io) => {
+  // Peek at the next call and agent in queue, handle if either is missing
+  const freeAgent = await nextAgent();
+  const pendingCall = await nextCall();
+
+  if (!pendingCall) {
+    console.log('No calls in queue')
+    return 
   }
 
-  return null
-}
-
-const getNextCall = async () => {
-  let queue = callQueue.getQueue()
-  console.log('current call queue: ', queue)
-  if (!callQueue.isEmpty()) {
-    return await callQueue.remove();
+  if (!freeAgent) {
+    console.log('No available agents to assign calls.');
+    io.to(nextCall.callerSocketId).emit('call-status', { status: 'No available interpreters' })
+    return 
   }
 
-  return null
-}
+  // Pop agent and call from queue
+  let agent = await retrieveAgent()
+  let call = await retrieveCall()
 
-const printCallQueue = () => {
-  let queue = callQueue.getQueue()
-  console.log('printing call queue: ', queue)
-}
+  // Stash the call and agent pair into limbo reservation
+  await limbo.stash(call.id, { agent , call })
 
-const printAgentQueue = () => {
-  let queue = agentQueue.getQueue()
-  console.log('printing agent queue: ', queue)
-}
-
-const assignCallToAgent = async ( io, call, agent) => {
-  const { callerId, callerSocketId, callPlacedAt, mode } = call
+  // Deconstruct call and agent to emit updates to corresponding parties
+  const { callerSocketId, id, mode } = call
   const { agentSocketId } = agent
 
-  io.to(agentSocketId).emit('incoming-call', {callerId, callPlacedAt, mode})
-
+  io.to(agentSocketId).emit('incoming-call', { callId: id, mode })
   io.to(callerSocketId).emit('call-status', { status: 'Ringing' })
-
-
 }
 
 
+const queueCall = async( call, io ) => {
+  await addCall(call)
+  await pairCall(io)
+}
 
-module.exports = { getAvailableAgent, getNextCall, assignCallToAgent, addAgent, removeAgent, addCall, printCallQueue, printAgentQueue };
+const queueAgent = async( agent, io ) => {
+  await addAgent(agent)
+  await pairCall(io)
+}
+
+
+module.exports = { queueCall, queueAgent, dequeAgent };
