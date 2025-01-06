@@ -6,6 +6,7 @@ const { generateAccessToken, generateRefreshToken, verifyRefreshToken } = requir
 const { getTimestamp } = require("../helper/moment");
 const mongoose = require('mongoose');
 const { Documents } = require("../static/Documents")
+const { agentQueue, callQueue } = require("../queues/Queues")
 
 
 const getDocumentContent = async (req, res) => {
@@ -37,6 +38,19 @@ const getDocumentContent = async (req, res) => {
     
   } catch (err) {
     res.status(500).json({ message: 'Error fetching dashboard', error: err.message });
+  }
+}
+
+const getQueueState = async (req, res) => {
+  try {
+    let agent = await agentQueue.getQueue()
+    let call = await callQueue.getQueue()
+    const queueState = {
+      call, agent
+    }
+    res.status(200).json(queueState)
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching state of queues', error: err.message });
   }
 }
 
@@ -268,4 +282,4 @@ const changePassword = async (req, res) => {
   }
 };
 
-module.exports = { register, login, changePassword, getDashboard, getProfile, tokenRefresh, getSettings, getDocuments, getDocumentContent };
+module.exports = { register, login, changePassword, getDashboard, getProfile, tokenRefresh, getSettings, getDocuments, getDocumentContent, getQueueState };

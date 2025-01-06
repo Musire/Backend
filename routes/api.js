@@ -1,5 +1,5 @@
 const { protect } = require('../middleware/auth.middleware');
-const { register, login, changePassword, getDashboard, getProfile, tokenRefresh, getSettings, getDocuments, getDocumentContent } = require('../controllers/Auth.Controller');
+const { register, login, changePassword, getDashboard, getProfile, tokenRefresh, getSettings, getDocuments, getDocumentContent, getQueueState } = require('../controllers/Auth.Controller');
 
 const { Router } = require('express');
 const router = Router();
@@ -31,5 +31,7 @@ router.post('/refresh-token', protect, tokenRefresh);
 // Route for changing the password (protected)
 router.post('/change-password', protect, changePassword);
 
+// Route for queue state (unprotected)
+router.get('/queue-state', getQueueState);
 
 module.exports = { router };

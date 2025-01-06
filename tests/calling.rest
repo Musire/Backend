@@ -71,4 +71,12 @@ Authorization: bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3MzZkY2ViM
 }
 
 
+### Test change-password endpoint
+
+GET  http://localhost:4173/api/queue-state
+Content-Type: application/json
+
+
+
+
 
