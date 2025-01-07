@@ -36,10 +36,10 @@ const retrieveCall = async () => {
 
 
 
-const pairCall = async (io) => {
+const pairCall = async (io, prevCall) => {
   // Peek at the next call and agent in queue, handle if either is missing
   const freeAgent = await nextAgent();
-  const pendingCall = await nextCall();
+  const pendingCall = prevCall || await nextCall();
 
   if (!pendingCall) {
     console.log('No calls in queue')
