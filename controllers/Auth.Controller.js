@@ -7,6 +7,7 @@ const { getTimestamp } = require("../helper/moment");
 const mongoose = require('mongoose');
 const { Documents } = require("../static/Documents")
 const { agentQueue, callQueue } = require("../queues/Queues")
+const limbo = require('../queues/Reservation')
 
 
 const getDocumentContent = async (req, res) => {
@@ -45,10 +46,11 @@ const getQueueState = async (req, res) => {
   try {
     let agent = await agentQueue.getQueue()
     let call = await callQueue.getQueue()
+    let reservation = await limbo.getMap()
     const queueState = {
-      call, agent
+      call, agent, reservation
     }
-    res.status(200).json(queueState)
+    res.status(200).json({ payload: queueState})
   } catch (error) {
     res.status(500).json({ message: 'Error fetching state of queues', error: err.message });
   }

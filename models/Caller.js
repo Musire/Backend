@@ -61,6 +61,10 @@ const callerSchema = new mongoose.Schema({
             enum: ['email', 'phone call', 'messaging']
         }
     },
+    tier: {
+        type: Number,
+        default: 3
+    },
     paperwork: { type: [Document.schema], default: () => callerDocuments },
 });
 

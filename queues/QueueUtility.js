@@ -22,8 +22,8 @@ const addCall = async (call) => {
   await callQueue.insert(call)
 }
 
-const dequeCall = async (agent) => {
-  await callQueue.delete(agent)
+const dequeCall = async (callId) => {
+  await callQueue.delete(callId)
 }
 
 const nextCall = async () => {
@@ -79,4 +79,4 @@ const queueAgent = async( agent, io ) => {
 }
 
 
-module.exports = { queueCall, queueAgent, dequeAgent };
+module.exports = { queueCall, queueAgent, dequeAgent, dequeCall };

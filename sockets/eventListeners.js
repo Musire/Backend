@@ -1,7 +1,7 @@
 const Agent = require('../models/Agent'); // Import Interpreter model
 const Caller = require("../models/Caller")
 const CallSession = require("../models/CallSession")
-const { queueAgent, queueCall, dequeAgent } = require('../queues/QueueUtility')
+const { queueAgent, queueCall, dequeAgent, dequeCall } = require('../queues/QueueUtility')
 const { generateAuthToken, generateRoom } = require('../helper/generator');
 const { getTimestamp } = require("../helper/moment")
 const { v4: uuidv4 } = require('uuid');
@@ -85,8 +85,9 @@ module.exports.placeCallListener = (socket, io) => {
 
             const caller = await Caller.findById(callerId);
             if (caller) {
+                let id = uuidv4()
                 const call = {
-                    id: uuidv4(),
+                    id,
                     callerId,
                     tier: caller.tier,
                     mode,
@@ -94,6 +95,7 @@ module.exports.placeCallListener = (socket, io) => {
                     callerSocketId: caller.socketId
                 }
                 await queueCall(call, io)
+                socket.emit('call-placed', { callId: id })
             }
           });
     } catch (error) {
@@ -109,7 +111,8 @@ module.exports.callAcceptedListener = (socket, io) => {
             console.log('call accepted')
 
             // Fetch call from limbo reservation and deconstruct if found
-            const pair = await limbo.access(callId)
+            const pair = await limbo.detach(callId)
+            console.log('pair found: ', pair)
             if (!pair) return;
             const { agent, call } = pair
             const { callerId, callPlacedAt, mode } = call
@@ -280,7 +283,7 @@ module.exports.availableListener = (socket, io) => {
             let queue = await agentQueue.getQueue()
             let inQueue = queue.some(a => a.agentId === agentId)
 
-            if (inQueue) return;
+            if (inQueue || agent.socketId === null) return;
 
             let agentInfo = {
                 agentId,
@@ -300,13 +303,10 @@ module.exports.availableListener = (socket, io) => {
 module.exports.callRejectedListener = (socket, io) => {
     try {
         socket.on('call-rejection', async ({ callId }) => {
+            console.log('call rejected: ', callId)
             // access the pair from limbo from callId
             let pair = await limbo.detach(callId)
             const { call, agent } = pair
-            
-            // agent sent to the back of the queue
-            agent.timestamp = getTimestamp()
-            queueAgent(agent, io)
 
             // queue call again to a new agent
             queueCall(call, io)
@@ -321,9 +321,15 @@ module.exports.callCancelledListener = (socket, io) => {
     try {
         socket.on('call-cancel', async ({ callId }) => {
             // access the pair from limbo from callId
-            let pair = await limbo.detach(callId)
-            const { agent } = pair
 
+
+            console.log('call cancelled', callId )
+            
+            let pair = await limbo.detach(callId)
+            if (!pair) return await dequeCall(callId)
+
+            const { agent } = pair
+            io.to(agent.agentSocketId).emit('call-cancelled');
             // agent sent to the back of the queue
             queueAgent(agent, io)
         })

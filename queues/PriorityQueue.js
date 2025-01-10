@@ -63,10 +63,14 @@ class Mutex {
 
     async delete(targetId) {
       return this.withLock(() => {
-        const index = this.heap.findIndex(agent => agent.agentSocketId === targetId);
+        let index = this.heap.findIndex(a => a.agentSocketId === targetId);
+
+        if (index === -1) {
+          index = this.heap.findIndex(a => a.id === targetId);
+        }
   
         if (index === -1) {
-          return console.log(`Agent with ID ${targetId} not found`);
+          return console.log(`no record with ID ${targetId} not found`);
         }
   
         // Remove the agent

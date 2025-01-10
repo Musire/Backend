@@ -7,21 +7,25 @@ class Mutex {
   }
 
   async lock() {
-    const ticket = new Promise((resolve) => this.queue.push(resolve));
-    if (!this.locked) {
-      this.locked = true;
-      this.queue.shift()?.(); // Resolve the first promise
+    // console.log("Requesting lock");
+
+    if (this.locked) {
+      await new Promise((resolve) => this.queue.push(resolve))
     }
-    await ticket; // Wait for the lock to be released
-    return () => this.unlock(); // Return a release function
+
+    this.locked = true
+    // console.log("Lock granted")
+
   }
 
   unlock() {
-    if (this.queue.length > 0) {
-      this.queue.shift()?.(); // Resolve the next promise
-    } else {
-      this.locked = false; // No more locks, mark as unlocked
-    }
+    if (!this.queue.length) {
+      this.locked = false;
+      // console.log('Lock released')
+      return;
+    } 
+    
+    this.queue.shift()?.();
   }
 }
 
@@ -32,11 +36,11 @@ class Limbo {
   }
 
   async withLock(fn) {
-    const release = await this.mutex.lock(); // Acquire the lock
+    await this.mutex.lock();
     try {
-      return await fn(); // Execute the provided function
+      return await fn();
     } finally {
-      release(); // Always release the lock
+      this.mutex.unlock()
     }
   }
 
@@ -47,23 +51,34 @@ class Limbo {
   }
 
   async access(callId) {
-    return this.withLock(() => this.limbo.get(callId) || null);
+    await this.withLock(() => {
+      const value = this.limbo.get(callId) || null;
+      return value;
+    });
   }
 
   async blip(callId) {
     return this.withLock(() => this.limbo.delete(callId));
   }
 
-  async detach(callId) {
-    return this.withLock(() => {
-      const call = this.access(callId);
-      if (call) {
-        this.limbo.delete(callId); // Remove the call after accessing it
-        return call;
-      }
-      return null; // Return null if the call is not found
-    });
+  async getMap() {
+    return this.withLock(() => Object.fromEntries(this.limbo));
   }
+
+  async detach(callId) {
+
+
+    return this.withLock(async () => {
+      let payload = null
+      let pair = this.limbo.get(callId)
+      if (pair) {
+        payload = pair
+        this.limbo.delete(callId); // Remove the call after accessing it
+      }
+      return payload; // Return null if the call is not found
+    });
+}
+
 
 }
 
