@@ -171,53 +171,28 @@ const login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    let user;
-
     // Find user by email (either Agent or Caller)
-    user = await Agent.findOne({ email });
-    if (!user) {
-      user = await Caller.findOne({ email });
-    }
+    let user = await Agent.findOne({ email }) || await Caller.findOne({ email });
 
-    if (!user) {
-      return res.status(400).json({ message: 'User not found' });
-    }
-
-    // Compare password (assuming you have a matchPassword method on both models)
-    const isMatch = await user.matchPassword(password);
-    if (!isMatch) {
+    if (!user || !(await user.matchPassword(password))) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Emit disconnect event if the user already has an active session
-    if (user.socketId) {
-      console.log('user forced disconnected', user.socketId)
-      const io = req.app.get('io'); // Assuming you have added `io` to the app instance
-      io.to(user.socketId).emit('force-disconnect', { message: 'Session terminated due to a new login' });
-    } 
+    if (user.loggedIn) {
+      console.log('found logged in')
+      return res.status(403).json({
+        payload : {
+          message: "already active",
+          userId: user._id
+        }
+      });
+    }
 
-    // Generate session ID and JWTs
-    const sessionId = new mongoose.Types.ObjectId(); // Create a unique session ID
-    const accessToken = generateAccessToken(user._id, user.profile.role, sessionId);
-    const refreshToken = generateRefreshToken(user._id, user.profile.role, sessionId);
+    const accessToken = generateAccessToken(user._id, user.profile.role );
+    const refreshToken = generateRefreshToken(user._id, user.profile.role );
 
-    // Invalidate any existing active session for the user
-    await Session.updateOne({ userId: user._id, isActive: true }, { $set: { isActive: false } });
-
-    // Store new session with both tokens
-    const newSession = new Session({
-      userId: user._id,
-      jwt: accessToken,
-      refreshToken: refreshToken,
-      sessionId: sessionId.toString(),
-      device: req.headers['user-agent'], // Store device info
-      isActive: true,
-      expiresAt: getTimestamp() +  (24 * 60 * 60 * 1000), // Set expiresAt for 1 days
-    });
-
-    await newSession.save();
     res.cookie('refreshToken', refreshToken, {
-      maxAge: (1000 * 60 * 60 * 24), // 1 hour
+      maxAge: (1000 * 60 * 60 * 24 * 7), // 1 week
       httpOnly: true, // Accessible only by the server
       sameSite: 'lax' // Restrict cross-site requests
     });
@@ -231,6 +206,44 @@ const login = async (req, res) => {
     res.status(500).json({ message: 'Error logging in', error: err.message });
   }
 };
+
+const override = async (req, res) => {
+  const { userId } = req.body;
+
+  try {
+    let user = await Agent.findById(userId) || await Caller.findById(userId)
+
+
+    if (!user) return res.status(400).json({ payload: { message: 'user not found'} })
+
+    const io = req.app.get('io');
+
+    console.log('socket: ', user.socketId)
+
+    io.to(user.socketId).emit('force-disconnect', {
+      message: 'Your session has been terminated due to a new login.',
+    });
+
+    const accessToken = generateAccessToken(userId, user.profile.role );
+    const refreshToken = generateRefreshToken(userId, user.profile.role );
+
+
+    // Set the refresh token in the cookies
+    res.cookie('refreshToken', refreshToken, {
+      maxAge: (1000 * 60 * 60 * 24 * 7), // 1 week
+      httpOnly: true, // Accessible only by the server
+      sameSite: 'lax' // Restrict cross-site requests
+    });
+
+    // Send new access token as response
+    const payload = { accessToken };
+    res.json({ message: 'Session overridden successfully', payload })
+    
+  } catch (err) {
+    console.log(err)
+    res.status(500).json({ message: 'Error registering user', error: err.message });
+  }
+}
 
 const tokenRefresh = async (req, res) => {
   const { refreshToken } = req.cookies;
@@ -284,4 +297,4 @@ const changePassword = async (req, res) => {
   }
 };
 
-module.exports = { register, login, changePassword, getDashboard, getProfile, tokenRefresh, getSettings, getDocuments, getDocumentContent, getQueueState };
+module.exports = { register, login, override, changePassword, getDashboard, getProfile, tokenRefresh, getSettings, getDocuments, getDocumentContent, getQueueState };

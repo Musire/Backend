@@ -32,6 +32,10 @@ const callerSchema = new mongoose.Schema({
         enum: ['available', 'in-call', 'post-call', 'unavailable'], 
         default: 'unavailable' 
     },
+    loggedIn: {
+        type: Boolean,
+        default: false
+    },
     profile : {
         joinedDate: {
             type: Date,
@@ -48,7 +52,7 @@ const callerSchema = new mongoose.Schema({
         currentState: {
             type: String,
             enum: ['active', 'unactive', 'pending']
-        },
+        }
     },
     settings: {
         billingType: {
@@ -82,16 +86,6 @@ callerSchema.virtual('profileCompletion').get(function () {
 // Method to match password with hashed password in DB
 callerSchema.methods.matchPassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
-};
-
-// Method to generate JWT token
-callerSchema.methods.generateAuthToken = function () {
-    const payload = {
-        id: this._id,
-        email: this.email,
-        role: this.profile.role
-    };
-    return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1d' });
 };
 
 // Pre-save hook to hash the password before saving to DB

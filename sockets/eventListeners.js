@@ -15,6 +15,7 @@ module.exports.registerCallerListener = (socket) => {
             if (!caller) return console.error(`Caller with ID ${callerId} not found`);;
 
             caller.socketId = socket.id; // Update socket ID for the caller
+            caller.loggedIn = true
             await caller.save();
             
             console.log(`Caller ${socket.id} registered`);
@@ -32,6 +33,7 @@ module.exports.registerInterpreterListener = (socket, io) => {
             if (!agent) return console.error(`Interpreter with ID ${interpreterId} not found`);
 
             agent.socketId = socket.id; // Update socket ID for the interpreter
+            agent.loggedIn = true
             await agent.save();
 
             console.log(`Agent ${socket.id} registered`);
@@ -54,23 +56,19 @@ module.exports.disconnectionListener = (socket) => {
     try {
         socket.on('disconnect', async () => {
             console.log('user disconnected:', socket.id);
-            let agent; 
+            let user = await Caller.findOne({ socketId: socket.id }) || await Agent.findOne({ socketId: socket.id })
 
-            agent = await Caller.findOne({ socketId: socket.id })
-            if (!agent) {
-                agent = await Agent.findOne({ socketId: socket.id })
-            }
-
-            if (!agent) {
+            if (!user) {
                 return console.log(`socketId: ${socket.id} not found`)
             }
 
-            agent.socketId = null
-            await agent.save()
+            user.socketId = null
+            user.loggedIn = false
+            await user.save()
 
-            if (agent.profile.role === 'agent') {
+            if (user.profile.role === 'agent') {
                 await dequeAgent(socket.id)
-                console.log(`removed ${agent._id}, from queue`)
+                console.log(`removed ${user._id}, from queue`)
             }
           });
     } catch (error) {
