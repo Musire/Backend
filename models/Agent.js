@@ -24,7 +24,7 @@ const agentSchema = new mongoose.Schema({
     },
     socketId: { 
         type: String, 
-        default: ""
+        default: null
     },
     status: { 
         type: String, 
@@ -50,7 +50,8 @@ const agentSchema = new mongoose.Schema({
         },
         currentState: {
             type: String,
-            enum: ['active', 'unactive', 'pending']
+            enum: ['active', 'inactive', 'pending'],
+            default: 'inactive'
         },
         payRate: {
             type: Number
@@ -67,7 +68,8 @@ const agentSchema = new mongoose.Schema({
         },
         preferredCommunication: {
             type: String,
-            enum: ['email', 'phone call', 'messaging']
+            enum: ['email', 'phone call', 'messaging'],
+            default: 'email'
         }
     },
     paperwork: { type: [Document.schema], default: () => agentDocuments }

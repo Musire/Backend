@@ -143,21 +143,22 @@ const getDocuments = async (req, res) => {
 
 // Register route - handles user registration (Agent or Caller)
 const register = async (req, res) => {
-  const { role } = req.body;
+  const { email, password, name, surname, role, team, ...rest } = req.body;
+  const profile = { role, team }
+  let user;
 
-  if (!['agent', 'caller'].includes(role)) {
-    return res.status(400).json({ message: 'Invalid role' });
-  }
+  console.log('route: register user')
 
   try {
-    let user;
-
     // Create Agent or Caller based on the role
     if (role === 'agent') {
-      user = new Agent(req.body);
+      user = new Agent({ email, password, name, surname, profile });
     } else if (role === 'caller') {
-      user = new Caller(req.body);
+      const { billingType, tier } = rest
+      const settings = { billingType }
+      user = new Caller({ email, password, name, surname, tier, profile, settings });
     }
+    console.log('user: ', user)
 
     await user.save();
     res.status(200).json({ message: 'User registered successfully'});

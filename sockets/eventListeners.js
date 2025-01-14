@@ -25,7 +25,6 @@ module.exports.registerCallerListener = (socket) => {
     }
 };
 
-
 module.exports.registerInterpreterListener = (socket, io) => {
     try {
         socket.on('register-interpreter', async ({ interpreterId }) => {
@@ -102,7 +101,6 @@ module.exports.placeCallListener = (socket, io) => {
     }
 }
 
-
 module.exports.callAcceptedListener = (socket, io) => {
     try {
         socket.on('call-accepted', async ({ callId, interpreterId }) => {
@@ -156,8 +154,6 @@ module.exports.callAcceptedListener = (socket, io) => {
     }
 }
 
-
-
 module.exports.agentJoinedListener = (socket) => {
     try {
         socket.on('agent-joined', async ({ roomId }) => {
@@ -185,7 +181,6 @@ module.exports.callerJoinedListener = (socket) => {
         throw new Error(error);
     }
 }
-
 
 module.exports.sessionEndedListener = (socket) => {
     try {
@@ -217,7 +212,6 @@ module.exports.sessionEndedListener = (socket) => {
         throw new Error(error);
     }
 };
-
 
 module.exports.callerSurveyListener = (socket) => {
     try {
@@ -254,9 +248,6 @@ module.exports.agentSurveyListener = (socket) => {
         throw new Error(error.message); 
     }
 };
-
-
-
 
 module.exports.unavailableListener = (socket) => {
     try {
@@ -296,7 +287,6 @@ module.exports.availableListener = (socket, io) => {
         throw new Error(error)
     }
 }
-
 
 module.exports.callRejectedListener = (socket, io) => {
     try {

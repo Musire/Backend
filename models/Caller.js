@@ -25,7 +25,7 @@ const callerSchema = new mongoose.Schema({
     },
     socketId: { 
         type: String, 
-        default: ""
+        default: null
     },
     status: { 
         type: String, 
@@ -51,7 +51,8 @@ const callerSchema = new mongoose.Schema({
         },
         currentState: {
             type: String,
-            enum: ['active', 'unactive', 'pending']
+            enum: ['active', 'inactive', 'pending'],
+            default: 'inactive'
         }
     },
     settings: {
@@ -62,7 +63,8 @@ const callerSchema = new mongoose.Schema({
         },
         preferredCommunication: {
             type: String,
-            enum: ['email', 'phone call', 'messaging']
+            enum: ['email', 'phone call', 'messaging'],
+            default: 'email'
         }
     },
     tier: {
