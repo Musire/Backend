@@ -17,15 +17,14 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
-    "is-empty": "^1.2.0",
     "jsonwebtoken": "^9.0.2",
     "moment-timezone": "^0.5.46",
     "mongoose": "^8.7.2",
     "socket.io": "^4.8.0",
-    "uuid": "^11.0.3",
-    "validator": "^13.12.0"
+    "uuid": "^11.0.3"
   },
   "devDependencies": {
+    "depcheck": "^1.4.7",
     "nodemon": "^3.1.7"
   }
 }

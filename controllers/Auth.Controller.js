@@ -51,7 +51,21 @@ const getQueueState = async (req, res) => {
       call, agent, reservation
     }
     res.status(200).json({ payload: queueState})
-  } catch (error) {
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching state of queues', error: err.message });
+  }
+}
+
+const getAgentState = async (req, res) => {
+  try {
+    let agents = await Agent.find()
+    const payload = agents.map(agent => ({
+      fullName: `${agent.name} ${agent.surname}`, 
+      status: agent.status,
+    }));
+    res.status(200).json({ payload })
+  } catch (err) {
+    console.log(err)
     res.status(500).json({ message: 'Error fetching state of queues', error: err.message });
   }
 }
@@ -298,4 +312,4 @@ const changePassword = async (req, res) => {
   }
 };
 
-module.exports = { register, login, override, changePassword, getDashboard, getProfile, tokenRefresh, getSettings, getDocuments, getDocumentContent, getQueueState };
+module.exports = { register, login, override, changePassword, getDashboard, getProfile, tokenRefresh, getSettings, getDocuments, getDocumentContent, getQueueState, getAgentState };
