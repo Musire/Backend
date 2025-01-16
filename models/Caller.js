@@ -29,7 +29,7 @@ const callerSchema = new mongoose.Schema({
     },
     status: { 
         type: String, 
-        enum: ['available', 'in-call', 'post-call', 'unavailable'], 
+        enum: ['available', 'in-call', 'post-call', 'unavailable', 'in-call', 'post-call', 'offline'], 
         default: 'unavailable' 
     },
     loggedIn: {

@@ -33,6 +33,7 @@ module.exports.registerInterpreterListener = (socket, io) => {
 
             agent.socketId = socket.id; // Update socket ID for the interpreter
             agent.loggedIn = true
+            agent.status = 'available'
             await agent.save();
 
             console.log(`Agent ${socket.id} registered`);
@@ -63,6 +64,7 @@ module.exports.disconnectionListener = (socket) => {
 
             user.socketId = null
             user.loggedIn = false
+            user.status = 'offline'
             await user.save()
 
             if (user.profile.role === 'agent') {
@@ -255,6 +257,9 @@ module.exports.unavailableListener = (socket) => {
             const agent = await Agent.findById(agentId)
             if (!agent) return console.log('agent not found')
 
+            agent.status = 'unavailable'
+            await agent.save()
+
             await dequeAgent(agent.socketId)
         })
     } catch (error) {
@@ -268,6 +273,10 @@ module.exports.availableListener = (socket, io) => {
         socket.on('available', async ({ agentId }) => {
             const agent = await Agent.findById(agentId)
             if (!agent) return console.log('agent not found')
+
+            agent.status = 'available'
+            await agent.save()
+            
 
             let queue = await agentQueue.getQueue()
             let inQueue = queue.some(a => a.agentId === agentId)

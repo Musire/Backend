@@ -62,6 +62,7 @@ const getAgentState = async (req, res) => {
     const payload = agents.map(agent => ({
       fullName: `${agent.name} ${agent.surname}`, 
       status: agent.status,
+      lastUpdated: agent.lastUpdated
     }));
     res.status(200).json({ payload })
   } catch (err) {

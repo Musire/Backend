@@ -3,6 +3,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Document  = require('./Document')
 const { agentDocuments } = require("../helper/objectConfig")
+const agentMiddleware = require('./middleware/agentMiddleware')
+const { getTimestamp } = require("../helper/moment");
 
 const agentSchema = new mongoose.Schema({
     email: {
@@ -28,7 +30,7 @@ const agentSchema = new mongoose.Schema({
     },
     status: { 
         type: String, 
-        enum: ['available', 'in-call', 'post-call', 'unavailable'], 
+        enum: ['available', 'in-call', 'post-call', 'unavailable', 'in-call', 'post-call', 'offline'], 
         default: 'unavailable' 
     },
     loggedIn: {
@@ -38,7 +40,7 @@ const agentSchema = new mongoose.Schema({
     profile : {
         joinedDate: {
             type: Date,
-            default: Date.now
+            default: getTimestamp()
         },
         role: {
             type: String,
@@ -50,7 +52,7 @@ const agentSchema = new mongoose.Schema({
         },
         currentState: {
             type: String,
-            enum: ['active', 'inactive', 'pending'],
+            enum: ['active', 'inactive', 'pending' ],
             default: 'inactive'
         },
         payRate: {
@@ -72,7 +74,11 @@ const agentSchema = new mongoose.Schema({
             default: 'email'
         }
     },
-    paperwork: { type: [Document.schema], default: () => agentDocuments }
+    paperwork: { type: [Document.schema], default: () => agentDocuments },
+    lastUpdated: { 
+        type: Date, 
+        default: getTimestamp()
+    }
 });
 
 // Virtual Property for Profile Completion
@@ -90,15 +96,7 @@ agentSchema.methods.matchPassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 };
 
-
-// Pre-save hook to hash the password before saving to DB
-agentSchema.pre('save', async function (next) {
-    if (!this.isModified('password')) {
-        return next();
-    }
-    this.password = await bcrypt.hash(this.password, 10);
-    next();
-});
+agentMiddleware(agentSchema)
 
 const Agent = mongoose.model('Agent', agentSchema);
 
