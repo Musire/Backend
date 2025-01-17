@@ -191,7 +191,7 @@ const login = async (req, res) => {
     let user = await Agent.findOne({ email }) || await Caller.findOne({ email });
 
     if (!user || !(await user.matchPassword(password))) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ payload: { message: 'Invalid credentials' }});
     }
 
     if (user.loggedIn) {
@@ -219,7 +219,7 @@ const login = async (req, res) => {
       message: 'Login successful', payload
     });
   } catch (err) {
-    res.status(500).json({ message: 'Error logging in', error: err.message });
+    res.status(500).json({ payload: { message: 'Error logging in', error: err.message }});
   }
 };
 
@@ -287,28 +287,19 @@ const tokenRefresh = async (req, res) => {
 
 // Change Password route (protected)
 const changePassword = async (req, res) => {
-  const { currentPassword, newPassword } = req.body;
-  const user = req.user;
+  const { email, password, password2 } = req.body;
 
   try {
-    let foundUser;
-    
-    // Find the user (Agent or Caller)
-    if (user.role === 'agent') {
-      foundUser = await Agent.findById(user.id);
-    } else if (user.role === 'caller') {
-      foundUser = await Caller.findById(user.id);
-    }
+    let user = await Caller.findOne({ email }) || await Agent.findOne({ email })
 
-    const isMatch = await foundUser.matchPassword(currentPassword);
-    if (!isMatch) {
-      return res.status(400).json({ message: 'Incorrect current password' });
-    }
+    if (!user) return res.status(401).json({ payload: { message: 'user not found'}})
 
-    foundUser.password = newPassword;
-    await foundUser.save(); // Save new password (hashed)
-    res.status(200).json({ message: 'Password updated successfully' });
+    if (!(password === password2)) return res.status(400).json({ message: 'passwords do not match'})
+    user.password = password;
+    await user.save()
+    res.status(200).json({ payload: { message: 'Password updated successfully' } });
   } catch (err) {
+    console.log(err.message)
     res.status(500).json({ message: 'Error changing password', error: err.message });
   }
 };

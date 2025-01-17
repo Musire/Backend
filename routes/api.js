@@ -29,7 +29,7 @@ router.get('/settings', protect, getSettings);
 router.post('/refresh-token', protect, tokenRefresh);
 
 // Route for changing the password (protected)
-router.post('/change-password', protect, changePassword);
+router.post('/change-password', changePassword);
 
 // Route for queue state (unprotected)
 router.get('/queue-state', getQueueState);
