@@ -63,7 +63,7 @@ const callerSchema = new mongoose.Schema({
         },
         preferredCommunication: {
             type: String,
-            enum: ['email', 'phone call', 'messaging'],
+            enum: ['email', 'phone call', 'text message'],
             default: 'email'
         }
     },

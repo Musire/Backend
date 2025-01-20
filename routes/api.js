@@ -1,5 +1,7 @@
 const { protect } = require('../middleware/auth.middleware');
-const { register, login, changePassword, getDashboard, getProfile, tokenRefresh, getSettings, getDocuments, getDocumentContent, getQueueState, override, getAgentState } = require('../controllers/Auth.Controller');
+const { register, login, override, changePassword, tokenRefresh } = require('../controllers/Auth.Controller');
+const { getDashboard, getProfile, getSettings, getDocuments, getDocumentContent, getQueueState, getAgentState } = require('../controllers/Query.Controller');
+const { updateSettings } = require('../controllers/Update.Controller')
 
 const { Router } = require('express');
 const router = Router();
@@ -39,5 +41,7 @@ router.post('/override', override)
 
 // Route to override user logged in
 router.get('/agent-state', getAgentState)
+
+router.patch('/settings', protect, updateSettings)
 
 module.exports = { router };

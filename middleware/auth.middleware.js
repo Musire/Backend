@@ -34,6 +34,7 @@ const protect = async (req, res, next) => {
       res.setHeader('Authorization', `Bearer ${newAccessToken}`); // Set new access token in the header
 
       req.user = decoded; // Attach user info to request object
+      console.log(decoded)
       next(); // Proceed to the next middleware/route handler
     } catch (refreshErr) {
       return res.status(403).send('Invalid or expired refresh token');
