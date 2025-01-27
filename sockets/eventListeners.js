@@ -85,16 +85,17 @@ module.exports.placeCallListener = (socket, io) => {
             const caller = await Caller.findById(callerId);
             if (caller) {
                 let id = uuidv4()
+                let callPlacedAt = getTimestamp()
                 const call = {
                     id,
                     callerId,
                     tier: caller.tier,
                     mode,
-                    callPlacedAt: getTimestamp(),
+                    callPlacedAt,
                     callerSocketId: caller.socketId
                 }
                 await queueCall(call, io)
-                socket.emit('call-placed', { callId: id })
+                socket.emit('call-placed', { call: {id, mode, callPlacedAt} })
             }
           });
     } catch (error) {

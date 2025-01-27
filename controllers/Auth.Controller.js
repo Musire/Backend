@@ -51,8 +51,15 @@ const login = async (req, res) => {
       });
     }
 
-    const accessToken = generateAccessToken(user._id, user.profile.role );
-    const refreshToken = generateRefreshToken(user._id, user.profile.role );
+    let tokenPayload = {
+      id: user._id,
+      fullName: `${user.name} ${user.surname}`,
+      email: user.email,
+      role: user.profile.role
+    }
+
+    const accessToken = generateAccessToken( tokenPayload );
+    const refreshToken = generateRefreshToken( tokenPayload );
 
     res.cookie('refreshToken', refreshToken, {
       maxAge: (1000 * 60 * 60 * 24 * 7), // 1 week
@@ -87,8 +94,15 @@ const override = async (req, res) => {
       message: 'Your session has been terminated due to a new login.',
     });
 
-    const accessToken = generateAccessToken(userId, user.profile.role );
-    const refreshToken = generateRefreshToken(userId, user.profile.role );
+    let tokenPayload = {
+      id: user._id,
+      fullName: `${user.name} ${user.surname}`,
+      email: user.email,
+      role: user.profile.role
+    }
+
+    const accessToken = generateAccessToken( tokenPayload );
+    const refreshToken = generateRefreshToken( tokenPayload );
 
 
     // Set the refresh token in the cookies

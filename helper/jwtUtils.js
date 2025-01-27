@@ -5,13 +5,13 @@ const JWT_SECRET = process.env.JWT_SECRET; // Replace with a secure secret key
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET; // Replace with a secure secret key
 
 // Generate an Access Token
-const generateAccessToken = (id, role) => {
-  return jwt.sign({ id, role }, JWT_SECRET, { expiresIn: '1d' });  // Access token valid for 24 hrs
+const generateAccessToken = (payload) => {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: '1d' });  // Access token valid for 24 hrs
 };
 
 // Generate a Refresh Token
-const generateRefreshToken = (id, role) => {
-  return jwt.sign({ id, role }, JWT_REFRESH_SECRET, { expiresIn: '7d' });  // Refresh token valid for 7 days
+const generateRefreshToken = (payload) => {
+  return jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: '7d' });  // Refresh token valid for 7 days
 };
 
 // Verify the Access Token

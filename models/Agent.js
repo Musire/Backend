@@ -30,7 +30,7 @@ const agentSchema = new mongoose.Schema({
     },
     status: { 
         type: String, 
-        enum: ['available', 'in-call', 'post-call', 'unavailable', 'in-call', 'post-call', 'offline'], 
+        enum: ['offline', 'unavailable', 'available', 'pairing', 'in-call', 'post-call'], 
         default: 'unavailable' 
     },
     loggedIn: {
