@@ -1,4 +1,21 @@
-const { placeCallListener, callAcceptedListener, disconnectionListener, callerJoinedListener, agentJoinedListener, registerInterpreterListener, registerCallerListener, sessionEndedListener, agentSurveyListener, callerSurveyListener, unavailableListener, availableListener, callCancelledListener, callRejectedListener } = require("./eventListeners")
+const { 
+  placeCallListener, 
+  callAcceptedListener, 
+  disconnectionListener, 
+  callerJoinedListener, 
+  agentJoinedListener, 
+  registerInterpreterListener, 
+  registerCallerListener, 
+  sessionEndedListener, 
+  agentSurveyListener, 
+  callerSurveyListener, 
+  unavailableListener, 
+  availableListener, 
+  callCancelledListener, 
+  callRejectedListener,
+  statusChangeListener
+
+ } = require("./eventListeners")
 
 // Setup socket events
 module.exports.setupSocket = (io) => {
@@ -31,5 +48,7 @@ module.exports.setupSocket = (io) => {
     callCancelledListener(socket, io)
     // call rejected
     callRejectedListener(socket, io)
+    // status change
+    statusChangeListener(socket)
   });
 };

@@ -37,34 +37,34 @@ const retrieveCall = async () => {
 
 
 const pairCall = async (io, prevCall) => {
-  // Peek at the next call and agent in queue, handle if either is missing
-  const freeAgent = await nextAgent();
-  const pendingCall = prevCall || await nextCall();
+    // Peek at the next call and agent in queue, handle if either is missing
+    const freeAgent = await nextAgent();
+    const pendingCall = prevCall || await nextCall();
 
-  if (!pendingCall) {
-    console.log('No calls in queue')
-    return 
-  }
+    if (!pendingCall) {
+      console.log('No calls in queue')
+      return 
+    }
 
-  if (!freeAgent) {
-    console.log('No available agents to assign calls.');
-    io.to(nextCall.callerSocketId).emit('call-status', { status: 'No available interpreters' })
-    return 
-  }
+    if (!freeAgent) {
+      console.log('No available agents to assign calls.');
+      io.to(nextCall.callerSocketId).emit('call-status', { status: 'No available interpreters' })
+      return 
+    }
 
-  // Pop agent and call from queue
-  let agent = await retrieveAgent()
-  let call = await retrieveCall()
+    // Pop agent and call from queue
+    let agent = await retrieveAgent()
+    let call = await retrieveCall()
 
-  // Stash the call and agent pair into limbo reservation
-  await limbo.stash(call.id, { agent , call })
+    // Stash the call and agent pair into limbo reservation
+    await limbo.stash(call.id, { agent , call })
+ 
+    // Deconstruct call and agent to emit updates to corresponding parties
+    const { callerSocketId, id, mode } = call
+    const { agentSocketId } = agent
 
-  // Deconstruct call and agent to emit updates to corresponding parties
-  const { callerSocketId, id, mode } = call
-  const { agentSocketId } = agent
-
-  io.to(agentSocketId).emit('incoming-call', { callId: id, mode })
-  io.to(callerSocketId).emit('call-status', { status: 'Ringing' })
+    io.to(agentSocketId).emit('incoming-call', { callId: id, mode })
+    io.to(callerSocketId).emit('call-status', { status: 'Ringing' })
 }
 
 

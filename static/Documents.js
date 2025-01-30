@@ -1,9 +1,10 @@
+const healthcareBAA = require('./documents/healthcareBAA')
 
 const Documents = {
     
     contract : {
         index: 0,
-        content: " this is the content of sent from the backend. secret !"
+        content: healthcareBAA
     },
     "terms of use": {
         index: 1,

@@ -8,6 +8,8 @@ const { v4: uuidv4 } = require('uuid');
 const { agentQueue } = require('../queues/Queues')
 const limbo = require('../queues/Reservation')
 
+
+// Status Changing Events
 module.exports.registerCallerListener = (socket) => {
     try {
         socket.on('register-caller', async ({ callerId }) => {
@@ -78,6 +80,70 @@ module.exports.disconnectionListener = (socket) => {
     }
 }
 
+module.exports.unavailableListener = (socket) => {
+    try {
+        socket.on('unavailable', async ({ agentId }) => {
+            const agent = await Agent.findById(agentId)
+            if (!agent) return console.log('agent not found')
+
+            agent.status = 'unavailable'
+            await agent.save()
+
+            await dequeAgent(agent.socketId)
+        })
+    } catch (error) {
+        console.error(error)
+        throw new Error(error)
+    }
+}
+
+module.exports.availableListener = (socket, io) => {
+    try {
+        socket.on('available', async ({ agentId }) => {
+            const agent = await Agent.findById(agentId)
+            if (!agent) return console.log('agent not found')
+
+            agent.status = 'available'
+            await agent.save()
+            
+
+            let queue = await agentQueue.getQueue()
+            let inQueue = queue.some(a => a.agentId === agentId)
+
+            if (inQueue || agent.socketId === null) return;
+
+            let agentInfo = {
+                agentId,
+                agentSocketId: agent.socketId,
+                timestamp: getTimestamp()
+            }
+            // Add interpreter to the queue of available interpreters
+            await queueAgent(agentInfo, io)
+        })
+    } catch (error) {
+        console.error(error)
+        throw new Error(error)
+    }
+}
+
+module.exports.statusChangeListener = (socket) => {
+    try {
+        socket.on('status-change', async ({ target }) => {
+            console.log('status change requested:')
+            let user = await Agent.findOne({ socketId: socket.id }) || await Caller.findOne({ socketId: socket.id })
+            if (!user) return;
+            console.log(`changing status to: ${target}`)
+
+            user.status = target
+            await user.save()
+        })
+    } catch (error) {
+        console.error(error)
+        throw new Error(error)
+    }
+}
+
+// Call Routing Events
 module.exports.placeCallListener = (socket, io) => {
     try {
         socket.on('place-call', async (callerId, mode) => {
@@ -122,6 +188,9 @@ module.exports.callAcceptedListener = (socket, io) => {
 
             if (!caller || !agentAssigned) return;
 
+            agentAssigned.status = 'in-call'
+            await agentAssigned.save()
+
             // Generate timestamp and calculate wait time for the call
             const callAcceptedAt = getTimestamp()
             const waitTime = Math.floor((callAcceptedAt - callPlacedAt) / 1000)
@@ -157,6 +226,46 @@ module.exports.callAcceptedListener = (socket, io) => {
     }
 }
 
+module.exports.callRejectedListener = (socket, io) => {
+    try {
+        socket.on('call-rejection', async ({ callId }) => {
+            console.log('call rejected: ', callId)
+            // access the pair from limbo from callId
+            let pair = await limbo.detach(callId)
+            const { call, agent } = pair
+
+            // queue call again to a new agent
+            queueCall(call, io)
+        })
+    } catch (error) {
+        console.error(error)
+        throw new Error(error)
+    }
+}
+
+module.exports.callCancelledListener = (socket, io) => {
+    try {
+        socket.on('call-cancel', async ({ callId }) => {
+            // access the pair from limbo from callId
+
+
+            console.log('call cancelled', callId )
+            
+            let pair = await limbo.detach(callId)
+            if (!pair) return await dequeCall(callId)
+
+            const { agent } = pair
+            io.to(agent.agentSocketId).emit('call-cancelled');
+            // agent sent to the back of the queue
+            queueAgent(agent, io)
+        })
+    } catch (error) {
+        console.error(error)
+        throw new Error(error)
+    }
+}
+
+// Call Related Events
 module.exports.agentJoinedListener = (socket) => {
     try {
         socket.on('agent-joined', async ({ roomId }) => {
@@ -251,91 +360,3 @@ module.exports.agentSurveyListener = (socket) => {
         throw new Error(error.message); 
     }
 };
-
-module.exports.unavailableListener = (socket) => {
-    try {
-        socket.on('unavailable', async ({ agentId }) => {
-            const agent = await Agent.findById(agentId)
-            if (!agent) return console.log('agent not found')
-
-            agent.status = 'unavailable'
-            await agent.save()
-
-            await dequeAgent(agent.socketId)
-        })
-    } catch (error) {
-        console.error(error)
-        throw new Error(error)
-    }
-}
-
-module.exports.availableListener = (socket, io) => {
-    try {
-        socket.on('available', async ({ agentId }) => {
-            const agent = await Agent.findById(agentId)
-            if (!agent) return console.log('agent not found')
-
-            agent.status = 'available'
-            await agent.save()
-            
-
-            let queue = await agentQueue.getQueue()
-            let inQueue = queue.some(a => a.agentId === agentId)
-
-            if (inQueue || agent.socketId === null) return;
-
-            let agentInfo = {
-                agentId,
-                agentSocketId: agent.socketId,
-                timestamp: getTimestamp()
-            }
-            // Add interpreter to the queue of available interpreters
-            await queueAgent(agentInfo, io)
-        })
-    } catch (error) {
-        console.error(error)
-        throw new Error(error)
-    }
-}
-
-module.exports.callRejectedListener = (socket, io) => {
-    try {
-        socket.on('call-rejection', async ({ callId }) => {
-            console.log('call rejected: ', callId)
-            // access the pair from limbo from callId
-            let pair = await limbo.detach(callId)
-            const { call, agent } = pair
-
-            // queue call again to a new agent
-            queueCall(call, io)
-        })
-    } catch (error) {
-        console.error(error)
-        throw new Error(error)
-    }
-}
-
-module.exports.callCancelledListener = (socket, io) => {
-    try {
-        socket.on('call-cancel', async ({ callId }) => {
-            // access the pair from limbo from callId
-
-
-            console.log('call cancelled', callId )
-            
-            let pair = await limbo.detach(callId)
-            if (!pair) return await dequeCall(callId)
-
-            const { agent } = pair
-            io.to(agent.agentSocketId).emit('call-cancelled');
-            // agent sent to the back of the queue
-            queueAgent(agent, io)
-        })
-    } catch (error) {
-        console.error(error)
-        throw new Error(error)
-    }
-}
-
-
-
