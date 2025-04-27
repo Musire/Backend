@@ -1,54 +1,21 @@
-const { 
-  placeCallListener, 
-  callAcceptedListener, 
-  disconnectionListener, 
-  callerJoinedListener, 
-  agentJoinedListener, 
-  registerInterpreterListener, 
-  registerCallerListener, 
-  sessionEndedListener, 
-  agentSurveyListener, 
-  callerSurveyListener, 
-  unavailableListener, 
-  availableListener, 
-  callCancelledListener, 
-  callRejectedListener,
-  statusChangeListener
+const callRoutingHandlers = require("./callRoutingHandlers");
+const connectionHandlers = require("./connectionHandlers");
+const recordHandlers = require("./recordHandlers");
+const roomHandler = require("./roomHandler");
+const statusHandlers = require("./statusHandlers");
 
- } = require("./eventListeners")
 
-// Setup socket events
-module.exports.setupSocket = (io) => {
-  io.on('connection', (socket) => {
-    // Register caller
-    registerCallerListener(socket)
-    // Register interpreter
-    registerInterpreterListener(socket, io)
-    // Handle "place-call" event from caller
-    placeCallListener(socket, io)
-    // Handle "call-accepted" event from agent
-    callAcceptedListener(socket, io)
-    // Handle "caller-joined" event from agent
-    callerJoinedListener(socket)
-    // Handle "agent-joined" event from agent
-    agentJoinedListener(socket)
-    // Handle disconnection
-    disconnectionListener(socket)
-    // Handle session ending
-    sessionEndedListener(socket)
-    // Handle session ending
-    agentSurveyListener(socket)
-    // Handle session ending
-    callerSurveyListener(socket)
-    // handle unavailable
-    unavailableListener(socket, io)
-    // handle available
-    availableListener(socket, io)
-    // call cancelled
-    callCancelledListener(socket, io)
-    // call rejected
-    callRejectedListener(socket, io)
-    // status change
-    statusChangeListener(socket)
-  });
-};
+module.exports.setupSocket = async (io) => {
+  io.on('connection', async (socket) => {
+    const { userid, role } = socket.handshake.query;
+    socket.data.userid = userid;
+    socket.data.role = role
+    console.log(`connected line to ${socket.data.userid} ${userid}`)
+
+    connectionHandlers(io, socket)
+    statusHandlers(io, socket)
+    callRoutingHandlers(io, socket)
+    recordHandlers(io, socket)
+    roomHandler(io, socket)
+  })
+}

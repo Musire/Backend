@@ -38,89 +38,120 @@ const login = async (req, res) => {
     let user = await Agent.findOne({ email }) || await Caller.findOne({ email });
 
     if (!user || !(await user.matchPassword(password))) {
-      return res.status(400).json({ payload: { message: 'Invalid credentials' }});
+      return res.status(400).json({ payload: { message: 'Invalid credentials' } });
     }
 
-    if (user.loggedIn) {
-      console.log('found logged in')
+    // Check if user already has an active session
+    const existingSession = await Session.findOne({ userId: user._id, isActive: true });
+
+    if (existingSession) {
+      console.log('found active session');
       return res.status(403).json({
-        payload : {
-          message: "already active",
+        payload: {
+          message: 'already active',
           userId: user._id
         }
       });
     }
 
-    let tokenPayload = {
+    // Generate token payload
+    const tokenPayload = {
       id: user._id,
       fullName: `${user.name} ${user.surname}`,
       email: user.email,
       role: user.profile.role
-    }
+    };
 
-    const accessToken = generateAccessToken( tokenPayload );
-    const refreshToken = generateRefreshToken( tokenPayload );
+    const accessToken = generateAccessToken(tokenPayload);
+    const refreshToken = generateRefreshToken(tokenPayload);
 
+    // Save refresh token to cookie
     res.cookie('refreshToken', refreshToken, {
-      maxAge: (1000 * 60 * 60 * 24 * 7), // 1 week
-      httpOnly: true, // Accessible only by the server
-      sameSite: 'lax' // Restrict cross-site requests
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+      httpOnly: true,
+      sameSite: 'lax'
     });
-    let payload = { accessToken }
 
-    // Send both access and refresh tokens to the client
+    // Create a session
+    await Session.create({ userId: user._id });
+
     res.json({
-      message: 'Login successful', payload
+      message: 'Login successful',
+      payload: { accessToken }
     });
+
   } catch (err) {
-    res.status(500).json({ payload: { message: 'Error logging in', error: err.message }});
+    console.error('Login error:', err);
+    res.status(500).json({
+      payload: {
+        message: 'Error logging in',
+        error: err.message
+      }
+    });
   }
 };
+
 
 const override = async (req, res) => {
   const { userId } = req.body;
 
   try {
-    let user = await Agent.findById(userId) || await Caller.findById(userId)
+    let user = await Agent.findById(userId) || await Caller.findById(userId);
 
+    if (!user) {
+      return res.status(400).json({ payload: { message: 'user not found' } });
+    }
 
-    if (!user) return res.status(400).json({ payload: { message: 'user not found'} })
+    // Close any existing session for this user
+    await Session.updateMany(
+      { userId: user._id, isActive: true },
+      { $set: { isActive: false } }
+    );
 
+    // Emit a force-disconnect to the previous session
     const io = req.app.get('io');
+    console.log('socket: ', user.socketId);
 
-    console.log('socket: ', user.socketId)
+    if (user.socketId) {
+      io.to(user.socketId).emit('force-disconnect', {
+        message: 'Your session has been terminated due to a new login.',
+      });
+    }
 
-    io.to(user.socketId).emit('force-disconnect', {
-      message: 'Your session has been terminated due to a new login.',
-    });
-
-    let tokenPayload = {
+    // Generate new tokens
+    const tokenPayload = {
       id: user._id,
       fullName: `${user.name} ${user.surname}`,
       email: user.email,
       role: user.profile.role
-    }
+    };
 
-    const accessToken = generateAccessToken( tokenPayload );
-    const refreshToken = generateRefreshToken( tokenPayload );
+    const accessToken = generateAccessToken(tokenPayload);
+    const refreshToken = generateRefreshToken(tokenPayload);
 
-
-    // Set the refresh token in the cookies
+    // Save refresh token to cookie
     res.cookie('refreshToken', refreshToken, {
-      maxAge: (1000 * 60 * 60 * 24 * 7), // 1 week
-      httpOnly: true, // Accessible only by the server
-      sameSite: 'lax' // Restrict cross-site requests
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+      httpOnly: true,
+      sameSite: 'lax'
     });
 
-    // Send new access token as response
+    // Create a new session
+    await Session.create({ userId: user._id });
+
+    // Respond with new access token
     const payload = { accessToken };
-    res.json({ message: 'Session overridden successfully', payload })
-    
+    res.json({ message: 'Session overridden successfully', payload });
+
   } catch (err) {
-    console.log(err)
-    res.status(500).json({ message: 'Error registering user', error: err.message });
+    console.error('Override error:', err);
+    res.status(500).json({
+      message: 'Error overriding session',
+      error: err.message
+    });
   }
-}
+};
+
 
 const tokenRefresh = async (req, res) => {
   const { refreshToken } = req.cookies;

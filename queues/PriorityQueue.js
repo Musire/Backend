@@ -1,107 +1,103 @@
+const QueueBackup = require('../models/QueueBackup.js')
+
+
 class Mutex {
     constructor() {
-      this.queue = [];
-      this.locked = false;
+      this._locked = false;
+      this._waiting = [];
     }
   
     async lock() {
-      const ticket = new Promise((resolve) => this.queue.push(resolve));
-      if (!this.locked) {
-        this.locked = true;
-        this.queue.shift()?.(); // Resolve the first promise
-      }
-      await ticket; // Wait for the lock to be released
-      return () => this.unlock(); // Return a release function
+      return new Promise((resolve) => {
+        if (!this._locked) {
+          this._locked = true;
+          resolve(() => this.unlock());
+        } else {
+          this._waiting.push(resolve);
+        }
+      });
     }
   
     unlock() {
-      if (this.queue.length > 0) {
-        this.queue.shift()?.();
+      if (this._waiting.length > 0) {
+        const nextResolve = this._waiting.shift();
+        nextResolve(() => this.unlock());
       } else {
-        this.locked = false;
+        this._locked = false;
       }
     }
-  }
+}
   
-  class PriorityQueue {
-    constructor(compareFn) {
+class PriorityQueue {
+    constructor(compareFn, name) {
       this.heap = [];
-      this.compare = compareFn || ((a, b) => a - b); // Default to a min-heap
+      this.compare = compareFn || ((a, b) => a - b); // Default min-heap
       this.mutex = new Mutex();
+      this.name = name;
     }
-
-
+  
     async withLock(fn) {
-      const release = await this.mutex.lock(); // Acquire the lock
+      const release = await this.mutex.lock();
       try {
-        return await fn(); // Execute the provided function
+        return await fn();
       } finally {
-        release(); // Always release the lock
+        release();
       }
     }
   
     async insert(element) {
-      return this.withLock(() => {
+      await this.withLock(() => {
         this.heap.push(element);
         this.heapifyUp();
       });
+  
+      await this.backup(); // <--- moved OUTSIDE the lock
     }
   
     async remove() {
-      return this.withLock(() => {
-        if (this.heap.length === 0) {
-          return console.log("Heap is empty");
-        }
+      let min = null;
   
-        const min = this.heap[0];
+      await this.withLock(() => {
+        if (this.heap.length === 0) return;
+        min = this.heap[0];
         this.swap(0, this.heap.length - 1);
         this.heap.pop();
         this.heapifyDown();
-        return min;
       });
+  
+      await this.backup(); // <--- moved OUTSIDE the lock
+      return min;
     }
-
+  
     async delete(targetId) {
-      return this.withLock(() => {
-        let index = this.heap.findIndex(a => a.agentSocketId === targetId);
-
-        if (index === -1) {
-          index = this.heap.findIndex(a => a.id === targetId);
-        }
+      await this.withLock(() => {
+        let index = this.heap.findIndex(a => (a.userid === targetId) || (a.id === targetId));
+        if (index === -1) return;
   
-        if (index === -1) {
-          return console.log(`no record with ID ${targetId} not found`);
-        }
-  
-        // Remove the agent
         this.swap(index, this.heap.length - 1);
         this.heap.pop();
-        
-        // Re-heapify after removal
-        this.heapifyUp(index); // If the element was moved up
-        this.heapifyDown(index); // If the element was moved down
+        this.heapifyUp(index);
+        this.heapifyDown(index);
       });
+  
+      await this.backup(); // <--- moved OUTSIDE the lock
     }
-
+  
     async peek() {
       return this.withLock(() => {
-        if (this.isEmpty()) return null;
-        return this.heap[0];
+        return this.isEmpty() ? null : this.heap[0];
       });
     }
-
+  
     async getQueue() {
-      return this.withLock(() => {
-        return this.heap
-      });
+      return this.withLock(() => [...this.heap]); // shallow copy
     }
-
+  
     isEmpty() {
       return this.heap.length === 0;
     }
   
-    heapifyUp() {
-      let index = this.heap.length - 1;
+    heapifyUp(index = this.heap.length - 1) {
       while (index > 0) {
         const parentIndex = Math.floor((index - 1) / 2);
         if (this.compare(this.heap[index], this.heap[parentIndex]) >= 0) break;
@@ -110,20 +106,16 @@ class Mutex {
       }
     }
   
-    heapifyDown() {
-      let index = 0;
+    heapifyDown(index = 0) {
       const length = this.heap.length;
       while (true) {
+        let smallest = index;
         const left = 2 * index + 1;
         const right = 2 * index + 2;
-        let smallest = index;
   
-        if (left < length && this.compare(this.heap[left], this.heap[smallest]) < 0) {
-          smallest = left;
-        }
-        if (right < length && this.compare(this.heap[right], this.heap[smallest]) < 0) {
-          smallest = right;
-        }
+        if (left < length && this.compare(this.heap[left], this.heap[smallest]) < 0) smallest = left;
+        if (right < length && this.compare(this.heap[right], this.heap[smallest]) < 0) smallest = right;
+  
         if (smallest === index) break;
   
         this.swap(index, smallest);
@@ -134,9 +126,36 @@ class Mutex {
     swap(i, j) {
       [this.heap[i], this.heap[j]] = [this.heap[j], this.heap[i]];
     }
+  
+    // Backup the current state of the queue to the backend
+    async backup() {
+        try {
+          await QueueBackup.findOneAndUpdate(
+            { name: this.name },
+            {
+              heap: this.heap,
+              createdAt: new Date(),
+            },
+            { upsert: true, new: true }
+          );
+      
+          console.log(`✅ Backed up queue: ${this.name}`);
+        } catch (error) {
+          console.error(`❌ Failed to back up queue: ${this.name}`, error);
+        }
+      }
+      
+
+    async restore() {
+      const queueData = await QueueBackup.findOne({ name: this.name });
+      if (queueData) {
+        this.heap = queueData.heap;
+        console.log(`✅ Restored queue: ${this.name}`);
+      } else {
+        console.log(`No backup found for queue: ${this.name}`);
+      }
+    }
   }
   
-  
-  
-  module.exports = PriorityQueue ;
-  
+
+module.exports = PriorityQueue;

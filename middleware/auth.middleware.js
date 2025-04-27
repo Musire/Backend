@@ -2,44 +2,42 @@ const { verifyAccessToken, verifyRefreshToken, generateAccessToken } = require('
 const Session = require('../models/Session');
 
 const protect = async (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1]; // Bearer <token>
-  
+  const token = req.headers.authorization?.split(' ')[1];
+
   if (!token) {
     return res.status(403).send('Access token required');
   }
 
   try {
-    // Verify the access token
     const decoded = verifyAccessToken(token);
-    req.user = decoded; // Attach user info to request object
-    return next(); // Proceed to the next middleware/route handler
+    req.user = decoded;
+    return next();
   } catch (err) {
-    // If the access token is expired, attempt to refresh it using the refresh token
     const refreshToken = req.cookies?.refreshToken;
-
     if (!refreshToken) {
       return res.status(403).send('Refresh token required');
     }
 
     try {
-      const decoded = verifyRefreshToken(refreshToken);
-      const session = await Session.findOne({ refreshToken });
+      const decoded = verifyRefreshToken(refreshToken); // contains userId
 
-      if (!session || session.userId.toString() !== decoded.userId.toString()) {
-        return res.status(403).send('Invalid refresh token');
+      // 👇 Look up active session for the user
+      const session = await Session.findOne({ userId: decoded.userId, isActive: true });
+
+      if (!session) {
+        return res.status(403).send('No active session found');
       }
 
-      // Generate a new access token
-      const newAccessToken = generateAccessToken(decoded.userId, decoded.sessionId);
-      res.setHeader('Authorization', `Bearer ${newAccessToken}`); // Set new access token in the header
+      const newAccessToken = generateAccessToken({ userId: decoded.userId });
+      res.setHeader('Authorization', `Bearer ${newAccessToken}`);
 
-      req.user = decoded; // Attach user info to request object
-      console.log(decoded)
-      next(); // Proceed to the next middleware/route handler
+      req.user = decoded;
+      return next();
     } catch (refreshErr) {
       return res.status(403).send('Invalid or expired refresh token');
     }
   }
 };
+
 
 module.exports = { protect };

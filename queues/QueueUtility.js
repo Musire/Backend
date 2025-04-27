@@ -1,6 +1,7 @@
+const CallSession = require('../models/CallSession');
 const { agentQueue, callQueue } = require('./Queues');
-const limbo = require('./Reservation')
-
+const { findSocketByUserId } = require('../helper/sockets');
+const Agent = require('../models/Agent');
 
 const addAgent = async (agent) => {
   await agentQueue.insert(agent)
@@ -34,12 +35,10 @@ const retrieveCall = async () => {
   return await callQueue.remove()
 }
 
-
-
-const pairCall = async (io, prevCall) => {
+const newPair = async (io) => {
     // Peek at the next call and agent in queue, handle if either is missing
     const freeAgent = await nextAgent();
-    const pendingCall = prevCall || await nextCall();
+    const pendingCall = await nextCall();
 
     if (!pendingCall) {
       console.log('No calls in queue')
@@ -48,34 +47,45 @@ const pairCall = async (io, prevCall) => {
 
     if (!freeAgent) {
       console.log('No available agents to assign calls.');
-      io.to(nextCall.callerSocketId).emit('call-status', { status: 'No available interpreters' })
+      let callSession = await CallSession.findById(pendingCall.id)
+
+      io.to(callSession.caller).emit('call-status', { status: 'No available interpreters' })
       return 
     }
-
     // Pop agent and call from queue
     let agent = await retrieveAgent()
+    // timestamp, userid
     let call = await retrieveCall()
+    // callPlacedAt, id, tier
 
-    // Stash the call and agent pair into limbo reservation
-    await limbo.stash(call.id, { agent , call })
- 
-    // Deconstruct call and agent to emit updates to corresponding parties
-    const { callerSocketId, id, mode } = call
-    const { agentSocketId } = agent
+    let callSession = await CallSession.findById(call.id)
+    callSession.agent = agent.userid
+    await callSession.save()
 
-    io.to(agentSocketId).emit('incoming-call', { callId: id, mode })
-    io.to(callerSocketId).emit('call-status', { status: 'Ringing' })
+    const agentSocket = findSocketByUserId(io, agent.userid)
+
+    agentSocket.emit('incoming-call', { 
+      callid: call.id, 
+      timestamp: agent.timestamp 
+    })
+
+    const agentDoc = await Agent.findOneAndUpdate(
+      { _id: agent.userid },
+      { $set: { status: 'ringing'}},
+      { new: true }
+    )
+    
+    io.to(callSession.caller).emit('call-status', { status: 'Ringing' })
 }
 
-
-const queueCall = async( call, io ) => {
+const queueCall = async( io, call ) => {
   await addCall(call)
-  await pairCall(io)
+  await newPair(io)
 }
 
-const queueAgent = async( agent, io ) => {
+const queueAgent = async( io, agent ) => {
   await addAgent(agent)
-  await pairCall(io)
+  await newPair(io)
 }
 
 

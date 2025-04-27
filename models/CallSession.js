@@ -1,13 +1,16 @@
 const mongoose = require('mongoose');
 
 const callSessionSchema = new mongoose.Schema({
-    roomId: {
-        type: String,
-        required: true
+    roomid: {
+        type: String
     },
     mode: { 
         type: String, 
-        enum: ['audio', 'video']
+        enum: ['audio', 'video'],
+        required: true
+    },
+    tier: {
+        type: Number
     },
     caller: {
         type: mongoose.Schema.Types.ObjectId,
@@ -16,8 +19,16 @@ const callSessionSchema = new mongoose.Schema({
     },
     agent: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Agent',
-        required: true
+        ref: 'Agent'
+    },
+    status: {
+        type: String,
+        enum: ['pending', 'accepted', 'ringing', 'completed'],
+        default: 'pending' // Default status is 'pending'
+    },
+    rejectedCount: {
+        type: Number,
+        default: 0 // Default rejected count is 0
     },
     createdAt: {
         type: Date,

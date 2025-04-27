@@ -14,7 +14,7 @@ const generateAuthToken = (role, roomId="", participantId="") => {
         const permissions = {
           creator: 'allow_mod',
           caller: 'allow_join',
-          interpreter: 'allow_join',
+          agent: 'allow_join',
         }
 
         const payload = {
