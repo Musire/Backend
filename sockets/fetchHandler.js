@@ -1,5 +1,7 @@
 const { getUserDoc } = require('../helper/sockets');
 const CallSession = require('../models/CallSession')
+const { Documents } = require("../static/Documents")
+
 
 module.exports = (io, socket) => {
 
@@ -37,5 +39,23 @@ module.exports = (io, socket) => {
         }
 
         callback({ response })
+    })
+
+    socket.on('fetchDoc', async ({ name }, callback) => {
+        const user = await getUserDoc(socket.data.userid)
+        if (!user) return;
+        
+        let doc = Documents[name.toLowerCase()]
+        const { content, index } = doc
+
+        const selectedDoc = user.paperwork[index]
+
+        const status = selectedDoc?.status
+        const dateSigned = selectedDoc?.signedDate
+
+        let isSigned = (status === 'signed') ? dateSigned : "pending"
+    
+        callback({ response: { content, isSigned } })
+         
     })
 }
