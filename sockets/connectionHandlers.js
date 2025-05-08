@@ -1,6 +1,7 @@
 
 const { getTimestamp } = require("../helper/moment");
 const { getRoomCount } = require("../helper/sockets");
+const Session = require('../models/Session')
 const Agent = require("../models/Agent");
 const Caller = require("../models/Caller");
 const CallSession = require("../models/CallSession");
@@ -69,6 +70,24 @@ module.exports = (io, socket) => {
 
 
     });
+
+    socket.on('logout', async () => {
+        const models = {
+            caller: Caller,
+            agent: Agent
+        }
+        const User = models[socket.data.role]
+        const user = await User.findOneAndUpdate(
+            { _id: socket.data.userid },
+            { $set: { status: 'offline', socketId: null } }
+        )
+
+        await Session.findOneAndDelete(
+            { userId: socket.data.userid}
+        )
+
+        socket.disconnect(true)
+    })
 
     
 }

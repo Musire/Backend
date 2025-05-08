@@ -3,6 +3,7 @@ const connectionHandlers = require("./connectionHandlers");
 const recordHandlers = require("./recordHandlers");
 const roomHandler = require("./roomHandler");
 const statusHandlers = require("./statusHandlers");
+const fetchHandler = require("./fetchHandler");
 
 
 module.exports.setupSocket = async (io) => {
@@ -17,5 +18,6 @@ module.exports.setupSocket = async (io) => {
     callRoutingHandlers(io, socket)
     recordHandlers(io, socket)
     roomHandler(io, socket)
+    fetchHandler(io, socket)
   })
 }

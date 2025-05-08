@@ -12,7 +12,7 @@ const { setupSocket } = require('./sockets/socketHandler')
 // instantiate express server as app
 const app = express();
 const server = http.createServer(app);
-const allowedOrigins = ['http://localhost:5173', 'https://neoteric-ls.netlify.app']
+const allowedOrigins = ['http://localhost:5173', 'http://192.168.1.69:5173', 'http://189.237.98.93:5173',  'https://neoteric-ls.netlify.app']
 
 const io = socketIo(server, {
   cors: {
@@ -62,6 +62,6 @@ app.set('io', io);
 // Setup Socket.IO
 setupSocket(io);
 
-server.listen(port, () => {
+server.listen(port, '0.0.0.0', () => {
     console.log(`Server running on port: ${port}`)
 })
